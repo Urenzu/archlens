@@ -1,17 +1,21 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:       #0c0c0c;
-  --surface:  #0c0c0c;
-  --surface2: #141414;
-  --border:   #222222;
+  --bg:        #090909;
+  --surface:   #101010;
+  --surface2:  #181818;
+  --surface3:  #202020;
+  --border:    #272727;
+  --border-hi: #363636;
 
-  --text:       #d8d8d8;
-  --text-dim:   #777777;
-  --text-faint: #444444;
+  --text:       #f0f0f0;
+  --text-dim:   #888888;
+  --text-faint: #3e3e3e;
 
-  --accent: #ffffff;
-  --danger: #ff3535;
+  --accent:  #ffffff;
+  --danger:  #e03535;
+  --warn:    #d08020;
+  --success: #40a060;
 }
 
 body {
@@ -29,4 +33,5 @@ body {
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }

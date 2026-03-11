@@ -1,5 +1,5 @@
 .sidebar {
-  background: var(--bg);
+  background: var(--surface);
   border-left: 1px solid var(--border);
   overflow-y: auto;
   overflow-x: hidden;
@@ -11,16 +11,17 @@
 }
 
 .empty {
-  padding: 24px 16px;
+  padding: 28px 18px;
   font-size: 10px;
   color: var(--text-faint);
   letter-spacing: 0.06em;
+  line-height: 1.7;
 }
 
 /* ── Header ── */
 
 .header {
-  padding: 14px 16px;
+  padding: 16px 16px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -30,14 +31,14 @@
 
 .fileAccent {
   width: 3px;
-  height: 32px;
-  border-radius: 1px;
+  height: 34px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
 .title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   letter-spacing: 0.01em;
 }
@@ -46,25 +47,26 @@
   font-size: 9px;
   font-weight: 600;
   color: var(--text-faint);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  margin-top: 2px;
 }
 
 /* ── Sections ── */
 
 .section {
-  padding: 14px 16px;
+  padding: 16px 16px 14px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .sectionTitle {
   font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   color: var(--text-faint);
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -75,8 +77,8 @@
 .metaRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
+  align-items: baseline;
+  padding: 5px 0;
 }
 
 .metaRowBlock {
@@ -86,12 +88,13 @@
 .metaHint {
   font-size: 9px;
   color: var(--text-faint);
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   letter-spacing: 0.02em;
+  line-height: 1.6;
 }
 
 .metaRowSpaced {
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .metaKey {
@@ -100,34 +103,36 @@
 }
 
 .metaVal {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* ── Complexity bar ── */
 
 .complexityBar {
-  height: 2px;
+  height: 3px;
   background: var(--border);
-  margin: 8px 0 6px;
+  border-radius: 2px;
+  margin: 10px 0 8px;
   overflow: hidden;
 }
 
 .complexityFill {
   height: 100%;
-  transition: width 0.3s;
+  border-radius: 2px;
+  transition: width 0.35s ease;
 }
 
-.low  { background: #484b57; }
-.med  { background: #7a7d8a; }
-.high { background: #b0b2bc; }
+.low  { background: #3a6640; }
+.med  { background: #505050; }
+.high { background: #c07820; }
 .crit { background: var(--danger); }
 
 .peakRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 3px 0;
 }
 
@@ -149,9 +154,9 @@
 }
 
 .peakVal {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -159,18 +164,20 @@
 
 .vulnCount {
   background: var(--danger);
-  color: var(--bg);
+  color: #f0ebe4;
   font-size: 8px;
   font-weight: 700;
-  border-radius: 2px;
-  padding: 1px 5px;
-  letter-spacing: 0;
+  border-radius: 3px;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
 }
 
 .vulnItem {
   border-left: 2px solid var(--danger);
-  padding: 6px 10px;
-  margin-bottom: 6px;
+  padding: 7px 10px;
+  margin-bottom: 7px;
+  background: rgba(232, 98, 26, 0.07);
+  border-radius: 0 3px 3px 0;
 }
 
 .vulnItem:last-child { margin-bottom: 0; }
@@ -178,21 +185,21 @@
 .vulnFn {
   font-size: 11px;
   color: var(--text);
-  font-weight: 500;
-  margin-bottom: 2px;
+  font-weight: 600;
+  margin-bottom: 3px;
 }
 
 .vulnTitle {
   font-size: 10px;
   color: var(--danger);
-  opacity: 0.8;
+  opacity: 0.85;
   line-height: 1.5;
 }
 
 /* ── Coupling / dependency lists ── */
 
 .depList {
-  margin-top: 6px;
+  margin-top: 8px;
   margin-bottom: 4px;
 }
 
@@ -200,14 +207,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 0;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
 }
 
+.depRow:last-child { border-bottom: none; }
+
 .depDot {
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
   flex-shrink: 0;
-  border-radius: 0;
+  border-radius: 50%;
 }
 
 .depName {
@@ -225,43 +235,45 @@
   flex-shrink: 0;
 }
 
-/* ── Callers (node view) ── */
+/* ── Instability ── */
 
 .instabilityRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0 2px;
+  padding: 5px 0 2px;
 }
 
 .instLabel {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
 }
 
 .instHint {
   font-size: 9px;
   color: var(--text-faint);
-  line-height: 1.5;
-  padding-top: 4px;
+  line-height: 1.6;
+  padding-top: 5px;
   letter-spacing: 0.02em;
 }
+
+/* ── Callers ── */
 
 .callerItem {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border);
 }
 
 .callerItem:last-child { border-bottom: none; }
 
 .dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
   background: var(--text-faint);
   flex-shrink: 0;
 }
@@ -271,6 +283,7 @@
   color: var(--text-dim);
   flex: 1;
   cursor: pointer;
+  transition: color 0.1s;
 }
 
 .callerName:hover { color: var(--text); }

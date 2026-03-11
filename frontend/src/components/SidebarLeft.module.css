@@ -1,5 +1,5 @@
 .sidebar {
-  background: var(--bg);
+  background: var(--surface);
   border-right: 1px solid var(--border);
   overflow: hidden;
   display: flex;
@@ -10,18 +10,18 @@
 }
 
 .section {
-  padding: 14px 0 8px;
+  padding: 12px 0 8px;
   overflow-y: auto;
   flex: 1;
 }
 
 .label {
   font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   color: var(--text-faint);
   text-transform: uppercase;
-  padding: 0 16px 8px;
+  padding: 0 16px 10px;
 }
 
 /* ── File rows ── */
@@ -30,20 +30,22 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px 6px 12px;
+  padding: 7px 14px 7px 12px;
   cursor: pointer;
   font-size: 11px;
   color: var(--text-dim);
   border-left: 2px solid transparent;
-  transition: color 0.1s;
+  transition: color 0.12s, background 0.12s;
 }
 
 .fileRow:hover {
   color: var(--text);
+  background: var(--surface2);
 }
 
 .fileActive {
   color: var(--text);
+  background: var(--surface2);
 }
 
 .chevron {
@@ -51,11 +53,6 @@
   width: 10px;
   flex-shrink: 0;
   color: var(--text-faint);
-  cursor: pointer;
-}
-
-.chevron:hover {
-  color: var(--text-dim);
 }
 
 .fileIcon {
@@ -64,7 +61,7 @@
 }
 
 .fileName {
-  font-weight: 500;
+  font-weight: 600;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -83,7 +80,7 @@
 }
 
 .count {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-faint);
   flex-shrink: 0;
   margin-left: 4px;
@@ -100,22 +97,24 @@
   font-size: 10px;
   color: var(--text-faint);
   border-left: 2px solid transparent;
-  transition: color 0.1s;
+  transition: color 0.1s, background 0.1s;
 }
 
 .fnRow:hover {
   color: var(--text-dim);
+  background: var(--surface2);
 }
 
 .fnActive {
   color: var(--text);
+  background: var(--surface2);
 }
 
 .fnDot {
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
   flex-shrink: 0;
-  border-radius: 0;
+  border-radius: 50%;
 }
 
 .fnName {
@@ -126,30 +125,52 @@
   min-width: 0;
 }
 
+/* ── Tags — pill badges ── */
+
 .tagHot {
   font-size: 8px;
-  color: #b06030;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #d08020;
+  background: rgba(208, 128, 32, 0.10);
+  border: 1px solid rgba(208, 128, 32, 0.28);
+  border-radius: 3px;
+  padding: 1px 5px;
   flex-shrink: 0;
 }
 
 .tagCx {
   font-size: 8px;
-  color: #7a7d8a;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #606060;
+  background: rgba(96, 96, 96, 0.10);
+  border: 1px solid rgba(96, 96, 96, 0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
   flex-shrink: 0;
 }
 
 .tagHotCx {
   font-size: 8px;
-  color: #c07840;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #d08020;
+  background: rgba(208, 128, 32, 0.10);
+  border: 1px solid rgba(208, 128, 32, 0.28);
+  border-radius: 3px;
+  padding: 1px 5px;
   flex-shrink: 0;
 }
 
 .tagVuln {
   font-size: 8px;
-  color: #b03030;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e03535;
+  background: rgba(224, 53, 53, 0.10);
+  border: 1px solid rgba(224, 53, 53, 0.28);
+  border-radius: 3px;
+  padding: 1px 5px;
   flex-shrink: 0;
 }

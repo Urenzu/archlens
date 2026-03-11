@@ -42,6 +42,19 @@ export default function App() {
   const selectedNode    = nodes.find((n) => n.id === selectedNodeId) ?? null;
   const selectedCallers = selectedNodeId ? (callers[selectedNodeId] ?? []) : [];
 
+  const clearSelection = useCallback(() => {
+    setSelectedNodeId(null);
+    setSelectedFileId(null);
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") clearSelection();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearSelection]);
+
   const handleSelectNode = useCallback((id: string) => {
     setSelectedNodeId((prev) => (prev === id ? null : id));
   }, []);
@@ -110,8 +123,6 @@ export default function App() {
         onToggleRight={toggleRight}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        hasSelection={!!(selectedFileId || selectedNodeId)}
-        onClearSelection={() => { setSelectedFileId(null); setSelectedNodeId(null); }}
       />
       <div style={{ display: "flex", overflow: "hidden" }}>
         <SidebarLeft
@@ -132,6 +143,9 @@ export default function App() {
           onSelectNode={handleSelectNode}
           onSelectFile={handleSelectFile}
           viewMode={viewMode}
+          loading={loading}
+          hasSelection={!!(selectedFileId || selectedNodeId)}
+          onClearSelection={clearSelection}
         />
         <ResizeHandle side="right" panelRef={rightRef} />
         <SidebarRight

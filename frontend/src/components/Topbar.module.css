@@ -1,11 +1,12 @@
 .topbar {
-  background: var(--bg);
+  position: relative;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 0 12px;
   gap: 10px;
-  height: 38px;
+  height: 40px;
   flex-shrink: 0;
 }
 
@@ -13,20 +14,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
   color: var(--text-dim);
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.12s, color 0.12s;
 }
 
 .panelBtn:hover {
-  background: var(--surface2);
+  background: var(--surface3);
   color: var(--text);
 }
 
@@ -41,7 +42,7 @@
 .analyzeForm {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
 }
 
@@ -51,15 +52,17 @@
   color: var(--text);
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 3px 8px;
+  border-radius: 4px;
+  padding: 4px 10px;
   flex: 1;
   min-width: 0;
   outline: none;
+  transition: border-color 0.12s;
+  letter-spacing: 0.02em;
 }
 
 .pathInput:focus {
-  border-color: var(--text-faint);
+  border-color: var(--border-hi);
 }
 
 .pathInput::placeholder {
@@ -69,15 +72,16 @@
 .analyzeBtn {
   font-family: inherit;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--bg);
   background: var(--text-dim);
   border: none;
-  border-radius: 3px;
-  padding: 3px 10px;
+  border-radius: 4px;
+  padding: 4px 12px;
   cursor: pointer;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   flex-shrink: 0;
+  transition: background 0.12s;
 }
 
 .analyzeBtn:hover {
@@ -85,35 +89,37 @@
 }
 
 .analyzeBtn:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   cursor: default;
 }
 
 .showAllBtn {
   background: none;
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
   color: var(--text-dim);
   font-family: inherit;
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  padding: 3px 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 0.1s, border-color 0.1s;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
 
 .showAllBtn:hover {
   color: var(--text);
   border-color: var(--text-faint);
+  background: var(--surface2);
 }
 
 .viewToggle {
   display: flex;
   align-items: center;
+  background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -124,36 +130,116 @@
   color: var(--text-faint);
   font-family: inherit;
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  padding: 3px 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 11px;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.12s, color 0.12s;
 }
 
 .viewBtn:hover {
   color: var(--text-dim);
-  background: var(--surface2);
+  background: var(--surface3);
 }
 
 .viewBtnActive {
   color: var(--text);
-  background: var(--surface2);
+  background: var(--surface3);
 }
 
 .stats {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 10px;
+  gap: 1px;
+}
+
+.statVal {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 8px;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.statItemDanger .statVal {
+  color: var(--danger);
+}
+
+.statItemDanger .statLabel {
+  color: var(--danger);
+  opacity: 0.7;
+}
+
+.statDivider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
   flex-shrink: 0;
 }
 
-.stat {
+.statError {
   font-size: 10px;
-  color: var(--text-faint);
-  letter-spacing: 0.05em;
+  color: var(--danger);
+  padding: 0 8px;
 }
 
-.statDanger {
-  color: var(--danger);
+/* ── Loading bar ── */
+
+@keyframes loadingSweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.loadingBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.loadingBar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 25%;
+  background: linear-gradient(90deg, transparent, var(--text-dim), transparent);
+  animation: loadingSweep 1.4s ease-in-out infinite;
+}
+
+/* ── Analyze button spinner dot ── */
+
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40%            { opacity: 1;   transform: scale(1); }
+}
+
+.analyzingDot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dotPulse 1.2s ease-in-out infinite;
 }

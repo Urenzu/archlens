@@ -9,11 +9,13 @@ export interface FileColor {
  * Works for any number of files — no palette size limit.
  */
 export function fileColor(index: number): FileColor {
-  const hue = (index * 137.508) % 360; // golden angle
+  // Warm, desaturated palette — industrial / forge feel.
+  // Low saturation keeps things from feeling rainbow; warm bias fits the theme.
+  const hue = (index * 137.508) % 360;
   return {
-    border:   `hsl(${hue}, 40%, 42%)`,
-    text:     `hsl(${hue}, 40%, 55%)`,
-    selected: `hsl(${hue}, 60%, 72%)`,
+    border:   `hsl(${hue}, 52%, 38%)`,
+    text:     `hsl(${hue}, 52%, 58%)`,
+    selected: `hsl(${hue}, 62%, 74%)`,
   };
 }
 

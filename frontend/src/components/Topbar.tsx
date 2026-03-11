@@ -14,16 +14,15 @@ interface Props {
   onToggleRight: () => void;
   viewMode: "functions" | "files";
   onViewModeChange: (mode: "functions" | "files") => void;
-  hasSelection: boolean;
-  onClearSelection: () => void;
 }
 
 export default function Topbar({
   stats, repoPath, onRepoPathChange, onAnalyze,
   loading, error, leftCollapsed, rightCollapsed, onToggleLeft, onToggleRight,
-  viewMode, onViewModeChange, hasSelection, onClearSelection,
+  viewMode, onViewModeChange,
 }: Props) {
   const s = stats;
+  const hasData = s.functions > 0 || s.modules > 0;
   return (
     <div className={styles.topbar}>
 
@@ -44,7 +43,7 @@ export default function Topbar({
           type="text"
           value={repoPath}
           onChange={(e) => onRepoPathChange(e.target.value)}
-          placeholder="repo path…"
+          placeholder="enter repo path…"
           spellCheck={false}
         />
         <button
@@ -52,44 +51,57 @@ export default function Topbar({
           type="submit"
           disabled={loading || !repoPath.trim()}
         >
-          {loading ? "…" : "analyze"}
+          {loading ? <span className={styles.analyzingDot} /> : "analyze"}
         </button>
       </form>
 
-      {hasSelection && (
-        <button
-          className={styles.showAllBtn}
-          onClick={onClearSelection}
-          title="Clear selection — show everything"
-        >
-          show all
-        </button>
-      )}
-
+      {/* View mode toggle — full words so intent is obvious */}
       <div className={styles.viewToggle}>
         <button
           className={`${styles.viewBtn} ${viewMode === "functions" ? styles.viewBtnActive : ""}`}
           onClick={() => onViewModeChange("functions")}
-          title="Functions view"
+          title="Show individual functions"
         >
-          fn
+          functions
         </button>
         <button
           className={`${styles.viewBtn} ${viewMode === "files" ? styles.viewBtnActive : ""}`}
           onClick={() => onViewModeChange("files")}
-          title="Files view"
+          title="Show file-level dependencies"
         >
           files
         </button>
       </div>
 
-      <div className={styles.stats}>
-        {error && <span className={styles.statDanger}>{error}</span>}
-        <span className={styles.stat}>{s.functions.toLocaleString()} fn</span>
-        <span className={styles.stat}>{s.classes} class</span>
-        <span className={styles.stat}>{s.modules} mod</span>
-        <span className={`${styles.stat} ${styles.statDanger}`}>{s.vulns} vuln</span>
-      </div>
+      {/* Stats — only shown after a repo is loaded */}
+      {hasData && (
+        <div className={styles.stats}>
+          {error && <span className={styles.statError}>{error}</span>}
+          <span className={styles.statItem}>
+            <span className={styles.statVal}>{s.functions.toLocaleString()}</span>
+            <span className={styles.statLabel}>functions</span>
+          </span>
+          <span className={styles.statDivider} />
+          <span className={styles.statItem}>
+            <span className={styles.statVal}>{s.classes}</span>
+            <span className={styles.statLabel}>classes</span>
+          </span>
+          <span className={styles.statDivider} />
+          <span className={styles.statItem}>
+            <span className={styles.statVal}>{s.modules}</span>
+            <span className={styles.statLabel}>modules</span>
+          </span>
+          {s.vulns > 0 && (
+            <>
+              <span className={styles.statDivider} />
+              <span className={`${styles.statItem} ${styles.statItemDanger}`}>
+                <span className={styles.statVal}>{s.vulns}</span>
+                <span className={styles.statLabel}>vulns</span>
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       <button
         className={`${styles.panelBtn} ${rightCollapsed ? styles.panelBtnDim : ""}`}
@@ -99,6 +111,7 @@ export default function Topbar({
         <PanelRightIcon />
       </button>
 
+      {loading && <div className={styles.loadingBar} />}
     </div>
   );
 }

@@ -12,6 +12,9 @@ interface Props {
   onSelectNode: (id: string) => void;
   onSelectFile: (file: string) => void;
   viewMode: "functions" | "files";
+  loading?: boolean;
+  hasSelection?: boolean;
+  onClearSelection?: () => void;
 }
 
 interface Transform { x: number; y: number; scale: number; }
@@ -174,7 +177,7 @@ function buildFileGraph(
 
 export default function GraphCanvas({
   nodes, edges, fileEdges: apiFileEdges, selectedNodeId, selectedFileId,
-  onSelectNode, onSelectFile, viewMode,
+  onSelectNode, onSelectFile, viewMode, loading, hasSelection, onClearSelection,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const activeNodesRef = useRef<typeof activeNodes>([]);
@@ -188,6 +191,7 @@ export default function GraphCanvas({
   const velocity = useRef({ vx: 0, vy: 0 });
   const lastPos = useRef({ x: 0, y: 0, t: 0 });
   const inertiaFrame = useRef<number | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -197,7 +201,7 @@ export default function GraphCanvas({
   );
 
   function colorFor(file: string | undefined) {
-    if (!file) return { border: "#505050", text: "#a0a0a0", selected: "#c0c0c0" };
+    if (!file) return { border: "#444444", text: "#686868", selected: "#909090" };
     return fileColor(fileColorMap.get(file) ?? 0);
   }
 
@@ -395,8 +399,17 @@ export default function GraphCanvas({
     return (
       <div className={styles.canvas}>
         <div className={styles.empty}>
-          <div className={styles.emptyTitle}>no repo loaded</div>
-          <div className={styles.emptyHint}>enter a path above and click analyze</div>
+          {loading ? (
+            <>
+              <div className={styles.loadingSpinner} />
+              <div className={styles.emptyTitle}>analyzing…</div>
+            </>
+          ) : (
+            <>
+              <div className={styles.emptyTitle}>no repo loaded</div>
+              <div className={styles.emptyHint}>enter a path above and click analyze</div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -412,17 +425,21 @@ export default function GraphCanvas({
         onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
       >
         <defs>
-          {/* Fn-view marker: small, tight */}
+          <pattern id="dot-grid"
+            x={transform.x % 28} y={transform.y % 28}
+            width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="0" cy="0" r="0.65" fill="#1a1a1a" />
+          </pattern>
           <marker id="arrow-fn" markerWidth="7" markerHeight="7" refX="6" refY="3.5"
             orient="auto" markerUnits="strokeWidth">
             <path d="M0,0.5 L0,6.5 L6,3.5 z" fill="context-stroke" />
           </marker>
-          {/* File-view marker: larger, clearly visible */}
           <marker id="arrow-file" markerWidth="8" markerHeight="8" refX="7" refY="4"
             orient="auto" markerUnits="strokeWidth">
             <path d="M0,0.5 L0,7.5 L7,4 z" fill="context-stroke" />
           </marker>
         </defs>
+        <rect width="100%" height="100%" fill="url(#dot-grid)" />
 
         <g transform={`translate(${transform.x},${transform.y}) scale(${scale})`}>
 
@@ -447,7 +464,7 @@ export default function GraphCanvas({
                   <path key={edge.id}
                     d={bezier(b.x, b.y, t.x, t.y)}
                     stroke={stroke}
-                    strokeWidth={(isCrossFile ? 1.5 : 1) * (isHovered ? 2.5 : 1)}
+                    strokeWidth={(isCrossFile ? 1.8 : 1.2) * (isHovered ? 2.2 : 1)}
                     fill="none"
                     opacity={isHovered ? 1 : effectiveHoveredEdgeId ? baseOp * 0.4 : baseOp}
                     markerEnd="url(#arrow-fn)"
@@ -501,24 +518,34 @@ export default function GraphCanvas({
                 const isConnected = connectedIds?.has(node.id) ?? false;
                 const isDimmedByFile = selectedFileId !== null && node.file !== selectedFileId;
                 const isDimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected;
-                const fill = isSelected || isConnected ? "#222" : (isHot || isComplex) ? "#1e1e1e" : "#181818";
-                const stroke = isSelected ? color.selected : isConnected ? color.text : color.border;
-                const labelColor = isSelected ? color.selected
+                const isNodeHovered = node.id === hoveredNodeId && !drag.current?.moved;
+                const fill = isSelected ? "#202020"
+                  : isNodeHovered ? "#1c1c1c"
+                  : isConnected ? "#1a1a1a"
+                  : (isHot || isComplex) ? "#161616"
+                  : "#111111";
+                const stroke = isSelected ? color.selected
+                  : isNodeHovered ? color.text
                   : isConnected ? color.text
-                  : isVuln ? "#e05555"
-                  : (isHot && isComplex) ? "#e0a060"
-                  : isHot ? "#c07840"
-                  : isComplex ? "#9a9daa"
-                  : "#a8a8a8";
+                  : color.border;
+                const labelColor = "#888888";
                 const cx = node.x + node.width / 2;
                 const cy = node.y + node.height / 2;
                 return (
                   <g key={node.id} className={styles.nodeGroup}
-                    opacity={isDimmedByFile ? 0.15 : isDimmedByEdge ? 0.2 : 1}
+                    opacity={isDimmedByFile ? 0.28 : isDimmedByEdge ? 0.28 : 1}
+                    onMouseEnter={() => setHoveredNodeId(node.id)}
+                    onMouseLeave={() => setHoveredNodeId(null)}
                     onClick={(e) => { if (drag.current?.moved) return; e.stopPropagation(); onSelectNode(node.id); }}>
+                    {isVuln && (
+                      <rect x={node.x - 2} y={node.y - 2}
+                        width={node.width + 4} height={node.height + 4}
+                        rx={3} fill="none" stroke="#e03535" strokeWidth={1.5}
+                        className={styles.vulnRing} />
+                    )}
                     <rect x={node.x} y={node.y} width={node.width} height={node.height}
                       rx={2} fill={fill} stroke={stroke}
-                      strokeWidth={isSelected ? 2 : isConnected ? 1.5 : 1} />
+                      strokeWidth={isSelected ? 1.5 : isNodeHovered ? 1.5 : isConnected ? 1.5 : 1} />
                     {showLabels && (
                       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
                         fill={labelColor} fontFamily="'IBM Plex Mono', monospace"
@@ -596,11 +623,11 @@ export default function GraphCanvas({
                 const isConnected = connectedIds?.has(node.id) ?? false;
                 const isActive = node.id === selectedFileId;
                 const dimmed = effectiveHoveredEdgeId !== null && !isConnected;
-                const stroke = node.hasVuln ? "#cc3333"
+                const stroke = node.hasVuln ? "#e03535"
                   : isActive ? color.selected
                   : isConnected ? color.text
                   : color.border;
-                const fill = isActive || isConnected ? "#1e1e1e" : "#141414";
+                const fill = isActive || isConnected ? "#1c1c1c" : "#111111";
                 const cx = node.x + node.width / 2;
                 const nameY = node.y + node.height / 2 - 9;
                 const metaY = node.y + node.height / 2 + 10;
@@ -612,7 +639,7 @@ export default function GraphCanvas({
 
                 return (
                   <g key={node.id} className={styles.fileNodeGroup}
-                    opacity={dimmed ? 0.2 : 1}
+                    opacity={dimmed ? 0.28 : 1}
                     style={{ transition: "opacity 0.12s" }}
                     onClick={() => { if (!drag.current?.moved) onSelectFile(node.id); }}>
                     {/* Subtle colored left accent bar */}
@@ -657,6 +684,12 @@ export default function GraphCanvas({
           <div className={styles.tooltipLabel}>{tooltip.label}</div>
           {tooltip.sub && <div className={styles.tooltipSub}>{tooltip.sub}</div>}
         </div>
+      )}
+
+      {hasSelection && onClearSelection && (
+        <button className={styles.showAllBtn} onClick={onClearSelection}>
+          esc · show all
+        </button>
       )}
     </div>
   );
