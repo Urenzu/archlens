@@ -426,9 +426,9 @@ export default function GraphCanvas({
       >
         <defs>
           <pattern id="dot-grid"
-            x={transform.x % 28} y={transform.y % 28}
-            width="28" height="28" patternUnits="userSpaceOnUse">
-            <circle cx="0" cy="0" r="0.65" fill="#1a1a1a" />
+            x={transform.x % 24} y={transform.y % 24}
+            width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="0" cy="0" r="0.7" fill="#222222" />
           </pattern>
           <marker id="arrow-fn" markerWidth="7" markerHeight="7" refX="6" refY="3.5"
             orient="auto" markerUnits="strokeWidth">
@@ -538,20 +538,37 @@ export default function GraphCanvas({
                     onMouseLeave={() => setHoveredNodeId(null)}
                     onClick={(e) => { if (drag.current?.moved) return; e.stopPropagation(); onSelectNode(node.id); }}>
                     {isVuln && (
-                      <rect x={node.x - 2} y={node.y - 2}
-                        width={node.width + 4} height={node.height + 4}
-                        rx={3} fill="none" stroke="#e03535" strokeWidth={1.5}
+                      <rect x={node.x - 3} y={node.y - 3}
+                        width={node.width + 6} height={node.height + 6}
+                        rx={9} fill="none" stroke="#e03535" strokeWidth={1.5}
                         className={styles.vulnRing} />
                     )}
                     <rect x={node.x} y={node.y} width={node.width} height={node.height}
-                      rx={2} fill={fill} stroke={stroke}
-                      strokeWidth={isSelected ? 1.5 : isNodeHovered ? 1.5 : isConnected ? 1.5 : 1} />
+                      rx={6} fill={fill} stroke={stroke}
+                      strokeWidth={isSelected ? 1.5 : isNodeHovered ? 1.5 : isConnected ? 1.5 : 0.75} />
+                    {/* Top-edge highlight for depth */}
+                    <line
+                      x1={node.x + 6} y1={node.y + 0.5}
+                      x2={node.x + node.width - 6} y2={node.y + 0.5}
+                      stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                      strokeLinecap="round" />
                     {showLabels && (
-                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
-                        fill={labelColor} fontFamily="'IBM Plex Mono', monospace"
-                        fontSize={11} fontWeight={isSelected || isConnected || isHot ? 500 : 400}>
-                        {node.label}
-                      </text>
+                      <>
+                        <text x={cx} y={cy - (node.kind ? 4 : 0)}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fill={labelColor} fontFamily="'IBM Plex Mono', monospace"
+                          fontSize={11} fontWeight={isSelected || isConnected || isHot ? 500 : 400}>
+                          {node.label}
+                        </text>
+                        {node.kind && (
+                          <text x={cx} y={cy + 10}
+                            textAnchor="middle" dominantBaseline="middle"
+                            fill="rgba(255,255,255,0.15)" fontFamily="'IBM Plex Sans', sans-serif"
+                            fontSize={8} fontWeight={500}>
+                            {node.kind}
+                          </text>
+                        )}
+                      </>
                     )}
                   </g>
                 );
@@ -642,15 +659,21 @@ export default function GraphCanvas({
                     opacity={dimmed ? 0.28 : 1}
                     style={{ transition: "opacity 0.12s" }}
                     onClick={() => { if (!drag.current?.moved) onSelectFile(node.id); }}>
-                    {/* Subtle colored left accent bar */}
-                    <rect x={node.x} y={node.y}
-                      width={3} height={node.height} rx={1}
-                      fill={color.border} opacity={0.9} />
                     {/* Main box */}
                     <rect x={node.x} y={node.y}
                       width={node.width} height={node.height}
-                      rx={3} fill={fill} stroke={stroke}
-                      strokeWidth={isActive ? 1.5 : isConnected ? 1.5 : 1} />
+                      rx={8} fill={fill} stroke={stroke}
+                      strokeWidth={isActive ? 1.5 : isConnected ? 1.5 : 0.75} />
+                    {/* Top-edge highlight */}
+                    <line
+                      x1={node.x + 8} y1={node.y + 0.5}
+                      x2={node.x + node.width - 8} y2={node.y + 0.5}
+                      stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+                      strokeLinecap="round" />
+                    {/* Colored accent bar */}
+                    <rect x={node.x + 1} y={node.y + 12}
+                      width={2.5} height={node.height - 24} rx={1.5}
+                      fill={color.border} opacity={0.8} />
                     {showLabels && (
                       <>
                         <text x={cx} y={nameY}
@@ -663,8 +686,8 @@ export default function GraphCanvas({
                         <text x={cx} y={metaY}
                           textAnchor="middle" dominantBaseline="middle"
                           fill={color.border}
-                          fontFamily="'IBM Plex Mono', monospace"
-                          fontSize={9}>
+                          fontFamily="'IBM Plex Sans', sans-serif"
+                          fontSize={9} fontWeight={500}>
                           {tags}
                         </text>
                       </>

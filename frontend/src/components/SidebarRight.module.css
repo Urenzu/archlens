@@ -1,11 +1,11 @@
 .sidebar {
   flex: 1;
   min-width: 0;
-  background: rgba(9, 9, 9, 0.82);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border-left: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04), -4px 0 32px rgba(0, 0, 0, 0.5);
+  background: rgba(12, 12, 12, 0.62);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), -4px 0 40px rgba(0, 0, 0, 0.6);
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -14,17 +14,18 @@
 
 .empty {
   padding: 28px 18px;
-  font-size: 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: var(--text-faint);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   line-height: 1.7;
 }
 
 /* ── Header ── */
 
 .header {
-  padding: 16px 16px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 18px 16px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -56,20 +57,23 @@
   margin-top: 2px;
 }
 
-/* ── Sections ── */
+/* ── Sections (cards) ── */
 
 .section {
-  padding: 16px 16px 14px;
-  border-bottom: 1px solid var(--border);
+  margin: 6px 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
 .sectionTitle {
   font-family: var(--font-ui);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  color: var(--text-dim);
   text-transform: uppercase;
   margin-bottom: 12px;
   display: flex;
@@ -119,7 +123,7 @@
 
 .complexityBar {
   height: 3px;
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 2px;
   margin: 10px 0 8px;
   overflow: hidden;
@@ -181,10 +185,10 @@
 
 .vulnItem {
   border-left: 2px solid var(--danger);
-  padding: 7px 10px;
-  margin-bottom: 7px;
-  background: rgba(232, 98, 26, 0.07);
-  border-radius: 0 3px 3px 0;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: rgba(224, 53, 53, 0.06);
+  border-radius: 0 6px 6px 0;
 }
 
 .vulnItem:last-child { margin-bottom: 0; }
@@ -215,7 +219,7 @@
   align-items: center;
   gap: 8px;
   padding: 5px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .depRow:last-child { border-bottom: none; }
@@ -274,7 +278,7 @@
   align-items: center;
   gap: 10px;
   padding: 7px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .callerItem:last-child { border-bottom: none; }

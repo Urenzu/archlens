@@ -67,17 +67,20 @@
 }
 
 .emptyTitle {
-  font-size: 12px;
+  font-family: var(--font-ui);
+  font-size: 13px;
   color: var(--text-faint);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
+  font-weight: 500;
 }
 
 .emptyHint {
-  font-size: 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: var(--text-faint);
   opacity: 0.45;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
 }
 
 .canvas {
