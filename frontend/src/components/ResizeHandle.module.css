@@ -1,0 +1,10 @@
+.handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.handle:hover { background: var(--border); }
+.handle:active { background: var(--text-faint); }

@@ -1,0 +1,155 @@
+.sidebar {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  transition: width 0.18s ease;
+}
+
+.section {
+  padding: 14px 0 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  padding: 0 16px 8px;
+}
+
+/* ── File rows ── */
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 12px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-left: 2px solid transparent;
+  transition: color 0.1s;
+}
+
+.fileRow:hover {
+  color: var(--text);
+}
+
+.fileActive {
+  color: var(--text);
+}
+
+.chevron {
+  font-size: 9px;
+  width: 10px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.chevron:hover {
+  color: var(--text-dim);
+}
+
+.fileIcon {
+  font-size: 8px;
+  flex-shrink: 0;
+}
+
+.fileName {
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.fileDir {
+  font-size: 9px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  font-size: 10px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* ── Function rows ── */
+
+.fnRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 30px;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-left: 2px solid transparent;
+  transition: color 0.1s;
+}
+
+.fnRow:hover {
+  color: var(--text-dim);
+}
+
+.fnActive {
+  color: var(--text);
+}
+
+.fnDot {
+  width: 3px;
+  height: 3px;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+
+.fnName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tagHot {
+  font-size: 8px;
+  color: #b06030;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.tagCx {
+  font-size: 8px;
+  color: #7a7d8a;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.tagHotCx {
+  font-size: 8px;
+  color: #c07840;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.tagVuln {
+  font-size: 8px;
+  color: #b03030;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}

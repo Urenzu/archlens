@@ -1,0 +1,34 @@
+# Project-specific
+idea.md
+bugs.md
+.claude/
+.history/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+*.so
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env.local
+*.local
+
+# Rust
+engine/target/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,281 @@
+.sidebar {
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  transition: width 0.2s ease;
+}
+
+.empty {
+  padding: 24px 16px;
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+}
+
+/* ── Header ── */
+
+.header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.fileAccent {
+  width: 3px;
+  height: 32px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.kind {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Sections ── */
+
+.section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Metric rows ── */
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.metaRowBlock {
+  margin-bottom: 2px;
+}
+
+.metaHint {
+  font-size: 9px;
+  color: var(--text-faint);
+  padding-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.metaRowSpaced {
+  margin-top: 10px;
+}
+
+.metaKey {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.metaVal {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Complexity bar ── */
+
+.complexityBar {
+  height: 2px;
+  background: var(--border);
+  margin: 8px 0 6px;
+  overflow: hidden;
+}
+
+.complexityFill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.low  { background: #484b57; }
+.med  { background: #7a7d8a; }
+.high { background: #b0b2bc; }
+.crit { background: var(--danger); }
+
+.peakRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.peakLabel {
+  font-size: 9px;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.peakName {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.peakVal {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ── Vulnerabilities ── */
+
+.vulnCount {
+  background: var(--danger);
+  color: var(--bg);
+  font-size: 8px;
+  font-weight: 700;
+  border-radius: 2px;
+  padding: 1px 5px;
+  letter-spacing: 0;
+}
+
+.vulnItem {
+  border-left: 2px solid var(--danger);
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.vulnItem:last-child { margin-bottom: 0; }
+
+.vulnFn {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.vulnTitle {
+  font-size: 10px;
+  color: var(--danger);
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+/* ── Coupling / dependency lists ── */
+
+.depList {
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.depRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.depDot {
+  width: 3px;
+  height: 3px;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+
+.depName {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.depCount {
+  font-size: 10px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+/* ── Callers (node view) ── */
+
+.instabilityRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 2px;
+}
+
+.instLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.instHint {
+  font-size: 9px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  padding-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+.callerItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.callerItem:last-child { border-bottom: none; }
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 0;
+  background: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.callerName {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex: 1;
+  cursor: pointer;
+}
+
+.callerName:hover { color: var(--text); }
+
+.callerDepth {
+  font-size: 10px;
+  color: var(--text-faint);
+}

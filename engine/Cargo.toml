@@ -1,0 +1,8 @@
+[package]
+name = "archlens-engine"
+version = "0.0.1"
+edition = "2021"
+description = "High-performance analysis engine for ArchLens"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

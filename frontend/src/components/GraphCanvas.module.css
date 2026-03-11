@@ -1,0 +1,85 @@
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.emptyTitle {
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
+}
+
+.emptyHint {
+  font-size: 10px;
+  color: var(--text-faint);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+}
+
+.canvas {
+  position: relative;
+  overflow: hidden;
+  background: #0c0c0c;
+  flex: 1;
+}
+
+.graph {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  user-select: none;
+}
+
+.graph:active {
+  cursor: grabbing;
+}
+
+.nodeGroup {
+  cursor: pointer;
+  transition: opacity 0.1s;
+}
+
+.nodeGroup:hover rect:last-of-type {
+  fill: #252525;
+}
+
+.fileNodeGroup {
+  cursor: pointer;
+}
+
+.fileNodeGroup:hover rect:last-of-type {
+  fill: #222222;
+}
+
+/* ── Tooltip ── */
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #161616;
+  border: 1px solid #2e2e2e;
+  border-radius: 3px;
+  padding: 6px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.tooltipLabel {
+  font-size: 11px;
+  color: #d8d8d8;
+  font-weight: 500;
+}
+
+.tooltipSub {
+  font-size: 9px;
+  color: #555;
+  margin-top: 2px;
+}

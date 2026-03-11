@@ -1,0 +1,159 @@
+.topbar {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.panelBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.panelBtn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.panelBtnDim {
+  color: var(--text-faint);
+}
+
+.panelBtnDim:hover {
+  color: var(--text-dim);
+}
+
+.analyzeForm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.pathInput {
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  flex: 1;
+  min-width: 0;
+  outline: none;
+}
+
+.pathInput:focus {
+  border-color: var(--text-faint);
+}
+
+.pathInput::placeholder {
+  color: var(--text-faint);
+}
+
+.analyzeBtn {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--bg);
+  background: var(--text-dim);
+  border: none;
+  border-radius: 3px;
+  padding: 3px 10px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.analyzeBtn:hover {
+  background: var(--text);
+}
+
+.analyzeBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.showAllBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.showAllBtn:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.viewToggle {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.viewBtn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.viewBtn:hover {
+  color: var(--text-dim);
+  background: var(--surface2);
+}
+
+.viewBtnActive {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.stat {
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+
+.statDanger {
+  color: var(--danger);
+}
