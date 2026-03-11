@@ -1,4 +1,4 @@
-import { useState, useMemo, forwardRef } from "react";
+import { useState, useMemo } from "react";
 import type { GraphNode } from "../types/graph";
 import { fileColor, assignFileColors } from "../lib/fileColors";
 import styles from "./SidebarLeft.module.css";
@@ -11,8 +11,8 @@ interface Props {
   onSelectFile: (file: string) => void;
 }
 
-const SidebarLeft = forwardRef<HTMLDivElement, Props>(function SidebarLeft(
-  { nodes, selectedNode, selectedFileId, onSelectNode, onSelectFile }, ref
+export default function SidebarLeft(
+  { nodes, selectedNode, selectedFileId, onSelectNode, onSelectFile }: Props
 ) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -50,7 +50,7 @@ const SidebarLeft = forwardRef<HTMLDivElement, Props>(function SidebarLeft(
   }
 
   return (
-    <div ref={ref} className={styles.sidebar} style={{ width: 220 }}>
+    <div className={styles.sidebar}>
       <div className={styles.section}>
         <div className={styles.label}>Files</div>
         {fileTree.map(([file, fileNodes]) => {
@@ -112,6 +112,4 @@ const SidebarLeft = forwardRef<HTMLDivElement, Props>(function SidebarLeft(
       </div>
     </div>
   );
-});
-
-export default SidebarLeft;
+}

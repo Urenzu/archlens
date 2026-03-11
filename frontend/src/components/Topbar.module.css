@@ -1,13 +1,17 @@
 .topbar {
   position: relative;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: rgba(9, 9, 9, 0.90);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 24px rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   padding: 0 12px;
   gap: 10px;
   height: 40px;
   flex-shrink: 0;
+  z-index: 20;
 }
 
 .panelBtn {
@@ -23,6 +27,7 @@
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
+  font-family: var(--font-ui);
   transition: background 0.12s, color 0.12s;
 }
 
@@ -47,22 +52,23 @@
 }
 
 .pathInput {
-  font-family: inherit;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text);
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   padding: 4px 10px;
   flex: 1;
   min-width: 0;
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color 0.12s, background 0.12s;
   letter-spacing: 0.02em;
 }
 
 .pathInput:focus {
-  border-color: var(--border-hi);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .pathInput::placeholder {
@@ -70,7 +76,7 @@
 }
 
 .analyzeBtn {
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 10px;
   font-weight: 600;
   color: var(--bg);
@@ -79,7 +85,7 @@
   border-radius: 4px;
   padding: 4px 12px;
   cursor: pointer;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   flex-shrink: 0;
   transition: background 0.12s;
 }
@@ -117,8 +123,8 @@
 .viewToggle {
   display: flex;
   align-items: center;
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   overflow: hidden;
   flex-shrink: 0;
@@ -128,10 +134,10 @@
   background: none;
   border: none;
   color: var(--text-faint);
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   padding: 4px 11px;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -139,12 +145,12 @@
 
 .viewBtn:hover {
   color: var(--text-dim);
-  background: var(--surface3);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .viewBtnActive {
   color: var(--text);
-  background: var(--surface3);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .stats {
@@ -152,9 +158,10 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   padding: 0 2px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .statItem {
@@ -166,6 +173,7 @@
 }
 
 .statVal {
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-dim);
@@ -173,9 +181,10 @@
 }
 
 .statLabel {
+  font-family: var(--font-ui);
   font-size: 8px;
   color: var(--text-faint);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1;
 }
@@ -192,7 +201,7 @@
 .statDivider {
   width: 1px;
   height: 20px;
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.07);
   flex-shrink: 0;
 }
 

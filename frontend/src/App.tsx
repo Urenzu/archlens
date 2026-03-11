@@ -124,16 +124,8 @@ export default function App() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
-      <div style={{ display: "flex", overflow: "hidden" }}>
-        <SidebarLeft
-          ref={leftRef}
-          nodes={nodes}
-          selectedNode={selectedNode}
-          selectedFileId={selectedFileId}
-          onSelectNode={handleSelectNode}
-          onSelectFile={handleSelectFile}
-        />
-        <ResizeHandle side="left" panelRef={leftRef} />
+      {/* Workspace: canvas fills, sidebars float over as glass panels */}
+      <div style={{ position: "relative", overflow: "hidden" }}>
         <GraphCanvas
           nodes={nodes}
           edges={edges}
@@ -147,15 +139,36 @@ export default function App() {
           hasSelection={!!(selectedFileId || selectedNodeId)}
           onClearSelection={clearSelection}
         />
-        <ResizeHandle side="right" panelRef={rightRef} />
-        <SidebarRight
-          ref={rightRef}
-          node={selectedNode}
-          callers={selectedCallers}
-          selectedFileId={selectedFileId}
-          allNodes={nodes}
-          fileEdges={fileEdges}
-        />
+        {/* Left glass panel */}
+        <div ref={leftRef} style={{
+          position: "absolute", left: 0, top: 0, bottom: 0,
+          width: 220, display: "flex", overflow: "hidden",
+          zIndex: 10, transition: "width 0.18s ease",
+        }}>
+          <SidebarLeft
+            nodes={nodes}
+            selectedNode={selectedNode}
+            selectedFileId={selectedFileId}
+            onSelectNode={handleSelectNode}
+            onSelectFile={handleSelectFile}
+          />
+          <ResizeHandle side="left" panelRef={leftRef} />
+        </div>
+        {/* Right glass panel */}
+        <div ref={rightRef} style={{
+          position: "absolute", right: 0, top: 0, bottom: 0,
+          width: 260, display: "flex", overflow: "hidden",
+          zIndex: 10, transition: "width 0.18s ease",
+        }}>
+          <ResizeHandle side="right" panelRef={rightRef} />
+          <SidebarRight
+            node={selectedNode}
+            callers={selectedCallers}
+            selectedFileId={selectedFileId}
+            allNodes={nodes}
+            fileEdges={fileEdges}
+          />
+        </div>
       </div>
     </div>
   );

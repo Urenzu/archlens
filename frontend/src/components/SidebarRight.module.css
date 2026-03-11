@@ -1,13 +1,15 @@
 .sidebar {
-  background: var(--surface);
-  border-left: 1px solid var(--border);
+  flex: 1;
+  min-width: 0;
+  background: rgba(9, 9, 9, 0.82);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04), -4px 0 32px rgba(0, 0, 0, 0.5);
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  min-width: 0;
-  transition: width 0.2s ease;
 }
 
 .empty {
@@ -37,13 +39,15 @@
 }
 
 .title {
+  font-family: var(--font-mono);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: 0.01em;
 }
 
 .kind {
+  font-family: var(--font-ui);
   font-size: 9px;
   font-weight: 600;
   color: var(--text-faint);
@@ -61,9 +65,10 @@
 }
 
 .sectionTitle {
+  font-family: var(--font-ui);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   color: var(--text-faint);
   text-transform: uppercase;
   margin-bottom: 12px;
@@ -86,10 +91,10 @@
 }
 
 .metaHint {
+  font-family: var(--font-ui);
   font-size: 9px;
   color: var(--text-faint);
   padding-bottom: 6px;
-  letter-spacing: 0.02em;
   line-height: 1.6;
 }
 
@@ -98,11 +103,13 @@
 }
 
 .metaKey {
+  font-family: var(--font-ui);
   font-size: 11px;
   color: var(--text-dim);
 }
 
 .metaVal {
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text);
   font-weight: 600;
@@ -221,6 +228,7 @@
 }
 
 .depName {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-dim);
   flex: 1;
@@ -245,17 +253,18 @@
 }
 
 .instLabel {
+  font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 600;
   color: var(--text);
 }
 
 .instHint {
+  font-family: var(--font-ui);
   font-size: 9px;
   color: var(--text-faint);
   line-height: 1.6;
   padding-top: 5px;
-  letter-spacing: 0.02em;
 }
 
 /* ── Callers ── */
@@ -279,6 +288,7 @@
 }
 
 .callerName {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-dim);
   flex: 1;

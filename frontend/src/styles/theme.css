@@ -16,12 +16,15 @@
   --danger:  #e03535;
   --warn:    #d08020;
   --success: #40a060;
+
+  --font-ui:   'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-ui);
   height: 100vh;
   overflow: hidden;
 }

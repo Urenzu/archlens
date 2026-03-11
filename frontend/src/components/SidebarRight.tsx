@@ -1,4 +1,4 @@
-import { forwardRef, useMemo } from "react";
+import { useMemo } from "react";
 import type { GraphNode, Caller, FileGraphEdge } from "../types/graph";
 import { fileColor, assignFileColors } from "../lib/fileColors";
 import styles from "./SidebarRight.module.css";
@@ -11,8 +11,8 @@ interface Props {
   fileEdges?: FileGraphEdge[];
 }
 
-const SidebarRight = forwardRef<HTMLDivElement, Props>(function SidebarRight(
-  { node, callers, selectedFileId, allNodes, fileEdges }, ref
+export default function SidebarRight(
+  { node, callers, selectedFileId, allNodes, fileEdges }: Props
 ) {
   // File-level analytics
   const fileStats = useMemo(() => {
@@ -49,7 +49,7 @@ const SidebarRight = forwardRef<HTMLDivElement, Props>(function SidebarRight(
   // ── Empty state ──
   if (!node && !selectedFileId) {
     return (
-      <div ref={ref} className={styles.sidebar} style={{ width: 260 }}>
+      <div className={styles.sidebar}>
         <div className={styles.empty}>Select a node to inspect</div>
       </div>
     );
@@ -64,7 +64,7 @@ const SidebarRight = forwardRef<HTMLDivElement, Props>(function SidebarRight(
     const avgClass = avgComplexity <= 3 ? styles.low : avgComplexity <= 6 ? styles.med : avgComplexity <= 10 ? styles.high : styles.crit;
 
     return (
-      <div ref={ref} className={styles.sidebar} style={{ width: 260 }}>
+      <div className={styles.sidebar}>
         <div className={styles.header}>
           <span className={styles.fileAccent} style={{ background: color.border }} />
           <div>
@@ -180,7 +180,7 @@ const SidebarRight = forwardRef<HTMLDivElement, Props>(function SidebarRight(
     : styles.high;
 
   return (
-    <div ref={ref} className={styles.sidebar} style={{ width: 260 }}>
+    <div className={styles.sidebar}>
       <div className={styles.header}>
         <div className={styles.title}>{node!.label}</div>
         <div className={styles.kind}>{node!.kind}</div>
@@ -274,9 +274,7 @@ const SidebarRight = forwardRef<HTMLDivElement, Props>(function SidebarRight(
       </div>
     </div>
   );
-});
-
-export default SidebarRight;
+}
 
 function MetaRow({ label, value, valueStyle, hint }: {
   label: string; value: string; valueStyle?: React.CSSProperties; hint?: string;

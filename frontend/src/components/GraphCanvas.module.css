@@ -22,26 +22,28 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--surface2);
-  border: 1px solid var(--border-hi);
+  background: rgba(9, 9, 9, 0.80);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 20px;
   color: var(--text-dim);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-ui);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   padding: 6px 16px;
   cursor: pointer;
   pointer-events: all;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: background 0.12s, color 0.12s, border-color 0.12s;
   animation: showAllIn 0.18s ease;
 }
 
 .showAllBtn:hover {
-  background: var(--surface3);
+  background: rgba(18, 18, 18, 0.88);
   color: var(--text);
-  border-color: var(--text-faint);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 @keyframes vulnPulse {
@@ -79,10 +81,10 @@
 }
 
 .canvas {
-  position: relative;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   background: var(--bg);
-  flex: 1;
 }
 
 .graph {
@@ -112,25 +114,27 @@
 .tooltip {
   position: absolute;
   pointer-events: none;
-  background: var(--surface2);
-  border: 1px solid var(--border-hi);
-  border-radius: 4px;
+  background: rgba(9, 9, 9, 0.88);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 5px;
   padding: 7px 11px;
-  font-family: 'IBM Plex Mono', monospace;
   white-space: nowrap;
-  z-index: 10;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  z-index: 30;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .tooltipLabel {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text);
   font-weight: 500;
 }
 
 .tooltipSub {
+  font-family: var(--font-ui);
   font-size: 9px;
   color: var(--text-dim);
   margin-top: 3px;
-  letter-spacing: 0.04em;
 }
