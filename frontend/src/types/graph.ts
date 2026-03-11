@@ -36,15 +36,9 @@ export interface Module {
   count: number;
 }
 
-export interface Issue {
-  label: string;
-  severity: "danger" | "warn" | "info";
-}
-
 export interface Caller {
   name: string;
   kind: "function" | "class";
-  depth: number;
 }
 
 export interface RepoStats {

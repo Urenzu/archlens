@@ -302,7 +302,3 @@
 
 .callerName:hover { color: var(--text); }
 
-.callerDepth {
-  font-size: 10px;
-  color: var(--text-faint);
-}

@@ -113,6 +113,14 @@
   transition: opacity 0.12s;
 }
 
+.edgePath {
+  transition: opacity 0.1s, stroke-width 0.1s;
+}
+
+.hitArea {
+  cursor: crosshair;
+}
+
 /* ── Tooltip ── */
 .tooltip {
   position: absolute;

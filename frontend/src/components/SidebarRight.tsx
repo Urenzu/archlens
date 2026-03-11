@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import type { GraphNode, Caller, FileGraphEdge } from "../types/graph";
 import { fileColor, assignFileColors } from "../lib/fileColors";
 import styles from "./SidebarRight.module.css";
@@ -276,7 +276,7 @@ export default function SidebarRight(
   );
 }
 
-function MetaRow({ label, value, valueStyle, hint }: {
+const MetaRow = memo(function MetaRow({ label, value, valueStyle, hint }: {
   label: string; value: string; valueStyle?: React.CSSProperties; hint?: string;
 }) {
   return (
@@ -288,4 +288,4 @@ function MetaRow({ label, value, valueStyle, hint }: {
       {hint && <div className={styles.metaHint}>{hint}</div>}
     </div>
   );
-}
+});

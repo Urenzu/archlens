@@ -53,8 +53,10 @@ const LOD_HIDE_LABELS = 0.35;
 const LOD_THIN_EDGES  = 0.20;
 const FILE_NODE_W = 160;
 const FILE_NODE_H = 58;
-const FILE_H_GAP = 220;  // horizontal center-to-center
-const FILE_V_GAP = 170;  // vertical layer-to-layer
+const FILE_H_GAP = 220;
+const FILE_V_GAP = 170;
+const NO_FILE_COLOR = { border: "#444444", text: "#686868", selected: "#909090" } as const;
+const LABEL_COLOR = "#888888";
 
 function bezier(sx: number, sy: number, tx: number, ty: number): string {
   const midY = (sy + ty) / 2;
@@ -200,9 +202,16 @@ export default function GraphCanvas({
     [nodes],
   );
 
+  // Cache color lookups — avoids creating new objects every render for the same file
+  const colorCache = useMemo(() => {
+    const cache = new Map<string, ReturnType<typeof fileColor>>();
+    for (const [file, idx] of fileColorMap.entries()) cache.set(file, fileColor(idx));
+    return cache;
+  }, [fileColorMap]);
+
   function colorFor(file: string | undefined) {
-    if (!file) return { border: "#444444", text: "#686868", selected: "#909090" };
-    return fileColor(fileColorMap.get(file) ?? 0);
+    if (!file) return NO_FILE_COLOR;
+    return colorCache.get(file) ?? NO_FILE_COLOR;
   }
 
   const { fileNodes, fileEdges } = useMemo(
@@ -220,11 +229,9 @@ export default function GraphCanvas({
   activeNodesRef.current = activeNodes;
 
   // Validate hoveredEdgeId against the *actually rendered* edge set.
-  // activeEdges contains ALL edges, but in functions view some are hidden by
-  // the file filter (return null, no hit area in DOM). Checking only activeEdges
-  // would still treat those hidden edges as valid, keeping the dim locked.
-  // So we also apply the same hiddenByFile logic used in the render.
-  const hoveredEdge = (() => {
+  // Applies the same hiddenByFile logic used in the render to prevent
+  // stale hover state from dimming all nodes.
+  const hoveredEdge = useMemo(() => {
     if (!hoveredEdgeId) return null;
     const e = activeEdges.find((e) => e.id === hoveredEdgeId);
     if (!e) return null;
@@ -234,11 +241,13 @@ export default function GraphCanvas({
       if (!(src?.file === selectedFileId && tgt?.file === selectedFileId)) return null;
     }
     return e;
-  })();
+  }, [hoveredEdgeId, activeEdges, viewMode, selectedFileId, nodeMap]);
+
   const effectiveHoveredEdgeId = hoveredEdge ? hoveredEdgeId : null;
-  const connectedIds = hoveredEdge
-    ? new Set([hoveredEdge.source, hoveredEdge.target])
-    : null;
+  const connectedIds = useMemo(
+    () => hoveredEdge ? new Set([hoveredEdge.source, hoveredEdge.target]) : null,
+    [hoveredEdge],
+  );
 
   // Extract fit logic so it can be triggered from multiple sources
   const fitView = useCallback((ns: typeof activeNodes) => {
@@ -468,7 +477,7 @@ export default function GraphCanvas({
                     fill="none"
                     opacity={isHovered ? 1 : effectiveHoveredEdgeId ? baseOp * 0.4 : baseOp}
                     markerEnd="url(#arrow-fn)"
-                    style={{ transition: "opacity 0.1s, stroke-width 0.1s" }}
+                    className={styles.edgePath}
                   />
                 );
               })}
@@ -487,7 +496,7 @@ export default function GraphCanvas({
                   <path key={`hit-${edge.id}`}
                     d={bezier(b.x, b.y, t.x, t.y)}
                     stroke="transparent" strokeWidth={12} fill="none"
-                    style={{ cursor: "crosshair" }}
+                    className={styles.hitArea}
                     onMouseEnter={(e) => {
                       if (drag.current?.moved) return;
                       setHoveredEdgeId(edge.id);
@@ -528,7 +537,6 @@ export default function GraphCanvas({
                   : isNodeHovered ? color.text
                   : isConnected ? color.text
                   : color.border;
-                const labelColor = "#888888";
                 const cx = node.x + node.width / 2;
                 const cy = node.y + node.height / 2;
                 return (
@@ -556,7 +564,7 @@ export default function GraphCanvas({
                       <>
                         <text x={cx} y={cy - (node.kind ? 4 : 0)}
                           textAnchor="middle" dominantBaseline="middle"
-                          fill={labelColor} fontFamily="'IBM Plex Mono', monospace"
+                          fill={LABEL_COLOR} fontFamily="'IBM Plex Mono', monospace"
                           fontSize={11} fontWeight={isSelected || isConnected || isHot ? 500 : 400}>
                           {node.label}
                         </text>
@@ -597,7 +605,7 @@ export default function GraphCanvas({
                     fill="none"
                     opacity={isHovered ? 1 : effectiveHoveredEdgeId ? 0.15 : 0.7}
                     markerEnd="url(#arrow-file)"
-                    style={{ transition: "opacity 0.12s, stroke-width 0.1s" }}
+                    className={styles.edgePath}
                   />
                 );
               })}
@@ -613,7 +621,7 @@ export default function GraphCanvas({
                   <path key={`hit-${edge.id}`}
                     d={bezier(b.x, b.y, t.x, t.y)}
                     stroke="transparent" strokeWidth={18} fill="none"
-                    style={{ cursor: "crosshair" }}
+                    className={styles.hitArea}
                     onMouseEnter={(e) => {
                       if (drag.current?.moved) return;
                       setHoveredEdgeId(edge.id);
@@ -657,7 +665,6 @@ export default function GraphCanvas({
                 return (
                   <g key={node.id} className={styles.fileNodeGroup}
                     opacity={dimmed ? 0.28 : 1}
-                    style={{ transition: "opacity 0.12s" }}
                     onClick={() => { if (!drag.current?.moved) onSelectFile(node.id); }}>
                     {/* Main box */}
                     <rect x={node.x} y={node.y}

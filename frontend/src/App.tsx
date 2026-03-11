@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { AnalysisResult, RepoStats } from "./types/graph";
 import { analyzeRepo } from "./api";
 import Topbar from "./components/Topbar";
@@ -6,6 +6,7 @@ import SidebarLeft from "./components/SidebarLeft";
 import SidebarRight from "./components/SidebarRight";
 import GraphCanvas from "./components/GraphCanvas";
 import ResizeHandle from "./components/ResizeHandle";
+import styles from "./App.module.css";
 
 const DEFAULT_REPO_PATH = import.meta.env.VITE_REPO_PATH || "";
 
@@ -39,8 +40,14 @@ export default function App() {
   const callers   = data?.callers ?? {};
   const stats     = data?.stats ?? EMPTY_STATS;
 
-  const selectedNode    = nodes.find((n) => n.id === selectedNodeId) ?? null;
-  const selectedCallers = selectedNodeId ? (callers[selectedNodeId] ?? []) : [];
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [nodes, selectedNodeId],
+  );
+  const selectedCallers = useMemo(
+    () => selectedNodeId ? (callers[selectedNodeId] ?? []) : [],
+    [callers, selectedNodeId],
+  );
 
   const clearSelection = useCallback(() => {
     setSelectedNodeId(null);
@@ -109,7 +116,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100vh", overflow: "hidden" }}>
+    <div className={styles.shell}>
       <Topbar
         stats={stats}
         repoPath={repoPath}
@@ -124,8 +131,7 @@ export default function App() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
-      {/* Workspace: canvas fills, sidebars float over as glass panels */}
-      <div style={{ position: "relative", overflow: "hidden" }}>
+      <div className={styles.workspace}>
         <GraphCanvas
           nodes={nodes}
           edges={edges}
@@ -139,12 +145,7 @@ export default function App() {
           hasSelection={!!(selectedFileId || selectedNodeId)}
           onClearSelection={clearSelection}
         />
-        {/* Left glass panel */}
-        <div ref={leftRef} style={{
-          position: "absolute", left: 0, top: 0, bottom: 0,
-          width: 220, display: "flex", overflow: "hidden",
-          zIndex: 10, transition: "width 0.18s ease",
-        }}>
+        <div ref={leftRef} className={styles.panelLeft}>
           <SidebarLeft
             nodes={nodes}
             selectedNode={selectedNode}
@@ -154,12 +155,7 @@ export default function App() {
           />
           <ResizeHandle side="left" panelRef={leftRef} />
         </div>
-        {/* Right glass panel */}
-        <div ref={rightRef} style={{
-          position: "absolute", right: 0, top: 0, bottom: 0,
-          width: 260, display: "flex", overflow: "hidden",
-          zIndex: 10, transition: "width 0.18s ease",
-        }}>
+        <div ref={rightRef} className={styles.panelRight}>
           <ResizeHandle side="right" panelRef={rightRef} />
           <SidebarRight
             node={selectedNode}
