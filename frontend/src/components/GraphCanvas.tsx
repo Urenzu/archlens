@@ -1,6 +1,8 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { GraphNode, GraphEdge, FileGraphEdge } from "../types/graph";
 import { fileColor, assignFileColors } from "../lib/fileColors";
+import { drawFrame, hitTestEdge, type VisibleEdge } from "../lib/canvasRenderer";
+import NodeOverlay from "./NodeOverlay";
 import styles from "./GraphCanvas.module.css";
 
 interface Props {
@@ -56,12 +58,7 @@ const FILE_NODE_H = 58;
 const FILE_H_GAP = 220;
 const FILE_V_GAP = 170;
 const NO_FILE_COLOR = { border: "#444444", text: "#686868", selected: "#909090" } as const;
-const LABEL_COLOR = "#888888";
-
-function bezier(sx: number, sy: number, tx: number, ty: number): string {
-  const midY = (sy + ty) / 2;
-  return `M${sx},${sy} C${sx},${midY} ${tx},${midY} ${tx},${ty}`;
-}
+const EDGE_HIT_THRESHOLD = 12; // CSS pixels — zoom-independent
 
 function nodeBottom(n: { x: number; y: number; width: number; height: number }) {
   return { x: n.x + n.width / 2, y: n.y + n.height };
@@ -76,7 +73,6 @@ function buildFileGraph(
   edges: GraphEdge[],
   apiFileEdges?: FileGraphEdge[],
 ): { fileNodes: FileNode[]; fileEdges: FileEdge[] } {
-  // 1. Group function nodes by file
   const fileMap = new Map<string, GraphNode[]>();
   for (const n of nodes) {
     if (!n.file) continue;
@@ -88,9 +84,6 @@ function buildFileGraph(
 
   const fileIds = [...fileMap.keys()].sort();
 
-  // 2. Aggregate cross-file edges
-  // Prefer import-based edges from the API (captures dynamic dispatch, indirect calls);
-  // fall back to deriving edges from detected function calls only.
   let fileEdges: FileEdge[];
   if (apiFileEdges && apiFileEdges.length > 0) {
     fileEdges = apiFileEdges.map((e) => ({
@@ -117,7 +110,6 @@ function buildFileGraph(
     }
   }
 
-  // 3. Assign layers via DFS longest-path from roots
   const inAdj = new Map<string, string[]>(fileIds.map((id) => [id, []]));
   for (const e of fileEdges) {
     inAdj.get(e.target)?.push(e.source);
@@ -128,7 +120,7 @@ function buildFileGraph(
 
   function dfsLayer(id: string): number {
     if (layerMap.has(id)) return layerMap.get(id)!;
-    if (visiting.has(id)) return 0; // break cycle
+    if (visiting.has(id)) return 0;
     visiting.add(id);
     const preds = inAdj.get(id) ?? [];
     const l = preds.length === 0 ? 0 : Math.max(...preds.map(dfsLayer)) + 1;
@@ -138,7 +130,6 @@ function buildFileGraph(
   }
   for (const id of fileIds) dfsLayer(id);
 
-  // 4. Group by layer, sort alphabetically within layer
   const byLayer = new Map<number, string[]>();
   for (const [id, l] of layerMap.entries()) {
     const arr = byLayer.get(l) ?? [];
@@ -147,7 +138,6 @@ function buildFileGraph(
   }
   for (const arr of byLayer.values()) arr.sort();
 
-  // 5. Position: center each layer horizontally
   const posMap = new Map<string, { x: number; y: number }>();
   for (const [l, ids] of byLayer.entries()) {
     const totalW = (ids.length - 1) * FILE_H_GAP;
@@ -157,7 +147,6 @@ function buildFileGraph(
     });
   }
 
-  // 6. Build FileNode objects
   const fileNodes: FileNode[] = fileIds.map((file) => {
     const fns = fileMap.get(file)!;
     const pos = posMap.get(file) ?? { x: 0, y: 0 };
@@ -181,8 +170,9 @@ export default function GraphCanvas({
   nodes, edges, fileEdges: apiFileEdges, selectedNodeId, selectedFileId,
   onSelectNode, onSelectFile, viewMode, loading, hasSelection, onClearSelection,
 }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const activeNodesRef = useRef<typeof activeNodes>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const activeNodesRef = useRef<(GraphNode | FileNode)[]>([]);
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
@@ -194,6 +184,7 @@ export default function GraphCanvas({
   const lastPos = useRef({ x: 0, y: 0, t: 0 });
   const inertiaFrame = useRef<number | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const frameRef = useRef<number>(0);
 
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -202,7 +193,6 @@ export default function GraphCanvas({
     [nodes],
   );
 
-  // Cache color lookups — avoids creating new objects every render for the same file
   const colorCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof fileColor>>();
     for (const [file, idx] of fileColorMap.entries()) cache.set(file, fileColor(idx));
@@ -228,9 +218,6 @@ export default function GraphCanvas({
   const activeEdges = viewMode === "files" ? fileEdges : edges;
   activeNodesRef.current = activeNodes;
 
-  // Validate hoveredEdgeId against the *actually rendered* edge set.
-  // Applies the same hiddenByFile logic used in the render to prevent
-  // stale hover state from dimming all nodes.
   const hoveredEdge = useMemo(() => {
     if (!hoveredEdgeId) return null;
     const e = activeEdges.find((e) => e.id === hoveredEdgeId);
@@ -249,12 +236,102 @@ export default function GraphCanvas({
     [hoveredEdge],
   );
 
-  // Extract fit logic so it can be triggered from multiple sources
-  const fitView = useCallback((ns: typeof activeNodes) => {
-    if (!ns.length || !svgRef.current) return;
-    const el = svgRef.current.parentElement;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
+  const scale = transform.scale;
+  const showLabels = scale >= LOD_HIDE_LABELS;
+  const fnEdgeOpacity = scale < LOD_THIN_EDGES ? 0.25 : 0.5;
+
+  // ── Build visible edges for the canvas renderer ────────────────────────────
+  const visibleEdges: VisibleEdge[] = useMemo(() => {
+    if (viewMode === "functions") {
+      const result: VisibleEdge[] = [];
+      for (const edge of edges) {
+        const src = nodeMap.get(edge.source);
+        const tgt = nodeMap.get(edge.target);
+        if (!src || !tgt) continue;
+        const hiddenByFile = selectedFileId !== null
+          && !(src.file === selectedFileId && tgt.file === selectedFileId);
+        if (hiddenByFile) continue;
+        const isHovered = edge.id === effectiveHoveredEdgeId;
+        const isCrossFile = src.file && tgt.file && src.file !== tgt.file;
+        const stroke = colorFor(src.file).border;
+        const baseOp = isCrossFile ? fnEdgeOpacity + 0.3 : fnEdgeOpacity;
+        const b = nodeBottom(src);
+        const t = nodeTop(tgt);
+        result.push({
+          id: edge.id,
+          sx: b.x, sy: b.y,
+          tx: t.x, ty: t.y,
+          color: stroke,
+          width: (isCrossFile ? 1.8 : 1.2) * (isHovered ? 2.2 : 1),
+          opacity: isHovered ? 1 : effectiveHoveredEdgeId ? baseOp * 0.4 : baseOp,
+          isHovered,
+        });
+      }
+      return result;
+    } else {
+      const result: VisibleEdge[] = [];
+      for (const edge of fileEdges) {
+        const src = fileNodeMap.get(edge.source);
+        const tgt = fileNodeMap.get(edge.target);
+        if (!src || !tgt) continue;
+        const isHovered = edge.id === effectiveHoveredEdgeId;
+        const stroke = colorFor(src.id).border;
+        const w = Math.min(1.5 + edge.callCount * 0.5, 6);
+        const b = nodeBottom(src);
+        const t = nodeTop(tgt);
+        result.push({
+          id: edge.id,
+          sx: b.x, sy: b.y,
+          tx: t.x, ty: t.y,
+          color: stroke,
+          width: w * (isHovered ? 1.8 : 1),
+          opacity: isHovered ? 1 : effectiveHoveredEdgeId ? 0.15 : 0.7,
+          isHovered,
+        });
+      }
+      return result;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edges, fileEdges, nodeMap, fileNodeMap, viewMode, selectedFileId, effectiveHoveredEdgeId, fnEdgeOpacity]);
+
+  // ── Canvas draw loop (also handles buffer sizing) ──────────────────────────
+  useEffect(() => {
+    cancelAnimationFrame(frameRef.current);
+    frameRef.current = requestAnimationFrame(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+
+      // Lazy-size the buffer to match the CSS display size every frame.
+      // This self-corrects any sizing issues regardless of mount timing.
+      const rect = canvas.getBoundingClientRect();
+      const bufW = Math.round(rect.width * dpr);
+      const bufH = Math.round(rect.height * dpr);
+      if (bufW === 0 || bufH === 0) return; // container not laid out yet
+      if (canvas.width !== bufW || canvas.height !== bufH) {
+        canvas.width = bufW;
+        canvas.height = bufH;
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      drawFrame({
+        ctx,
+        width: canvas.width,
+        height: canvas.height,
+        dpr,
+        tx: transform.x,
+        ty: transform.y,
+        scale: transform.scale,
+        edges: visibleEdges,
+      });
+    });
+  }, [transform, visibleEdges]);
+
+  // ── Fit view ───────────────────────────────────────────────────────────────
+  const fitView = useCallback((ns: (GraphNode | FileNode)[]) => {
+    if (!ns.length || !containerRef.current) return;
+    const { width, height } = containerRef.current.getBoundingClientRect();
     if (!width || !height) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of ns) {
@@ -265,11 +342,11 @@ export default function GraphCanvas({
     }
     const graphW = maxX - minX + PAD * 2;
     const graphH = maxY - minY + PAD * 2;
-    const scale = Math.min(width / graphW, height / graphH, 1);
+    const s = Math.min(width / graphW, height / graphH, 1);
     setTransform({
-      x: (width  - graphW * scale) / 2 - minX * scale + PAD * scale,
-      y: (height - graphH * scale) / 2 - minY * scale + PAD * scale,
-      scale,
+      x: (width  - graphW * s) / 2 - minX * s + PAD * s,
+      y: (height - graphH * s) / 2 - minY * s + PAD * s,
+      scale: s,
     });
   }, []);
 
@@ -286,9 +363,9 @@ export default function GraphCanvas({
     if (inertiaFrame.current !== null) cancelAnimationFrame(inertiaFrame.current);
   }, []);
 
-  // Re-fit when the canvas container is resized (either sidebar toggled or dragged)
+  // Re-fit when the container is resized (sidebar toggle / drag)
   useEffect(() => {
-    const el = svgRef.current?.parentElement;
+    const el = containerRef.current;
     if (!el) return;
     let lastW = 0, lastH = 0;
     const ro = new ResizeObserver((entries) => {
@@ -302,6 +379,7 @@ export default function GraphCanvas({
     return () => ro.disconnect();
   }, [fitView]);
 
+  // ── Wheel zoom ─────────────────────────────────────────────────────────────
   const onWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     if (inertiaFrame.current !== null) {
@@ -310,7 +388,7 @@ export default function GraphCanvas({
     }
     setHoveredEdgeId(null);
     setTooltip(null);
-    const rect = svgRef.current!.getBoundingClientRect();
+    const rect = containerRef.current!.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
@@ -325,15 +403,13 @@ export default function GraphCanvas({
   }, []);
 
   useEffect(() => {
-    const el = svgRef.current;
+    const el = containerRef.current;
     if (!el) return;
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [onWheel, nodes]); // re-run when nodes load so the SVG ref is populated
+  }, [onWheel, nodes]);
 
-  // Store transform in a ref so drag closures always see the latest value
-  // without needing transform in the useCallback deps (which caused re-creation
-  // every frame during drag, leading to stale closures and the "black screen").
+  // ── Pan / drag ─────────────────────────────────────────────────────────────
   const transformRef = useRef(transform);
   transformRef.current = transform;
 
@@ -397,16 +473,87 @@ export default function GraphCanvas({
 
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
-  }, []); // stable — no deps needed, reads transform from ref
+  }, []);
 
+  // ── Edge hit testing on mouse move ─────────────────────────────────────────
+  const onCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (drag.current?.moved) return;
+    const rect = containerRef.current!.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const worldX = (mx - transformRef.current.x) / transformRef.current.scale;
+    const worldY = (my - transformRef.current.y) / transformRef.current.scale;
 
-  const scale = transform.scale;
-  const showLabels = scale >= LOD_HIDE_LABELS;
-  const fnEdgeOpacity = scale < LOD_THIN_EDGES ? 0.25 : 0.5;
+    const hitId = hitTestEdge(visibleEdges, worldX, worldY, EDGE_HIT_THRESHOLD, transformRef.current.scale);
 
-  if (!nodes.length) {
-    return (
-      <div className={styles.canvas}>
+    if (hitId) {
+      setHoveredEdgeId(hitId);
+      const edge = visibleEdges.find((e) => e.id === hitId);
+      if (edge) {
+        if (viewMode === "functions") {
+          const src = nodes.find((n) => {
+            const b = nodeBottom(n);
+            return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
+          });
+          const tgt = nodes.find((n) => {
+            const t = nodeTop(n);
+            return Math.abs(t.x - edge.tx) < 1 && Math.abs(t.y - edge.ty) < 1;
+          });
+          if (src && tgt) {
+            setTooltip({
+              x: mx, y: my,
+              label: `${src.label} → ${tgt.label}`,
+              sub: [src.file?.split("/").pop(), tgt.file?.split("/").pop()]
+                .filter(Boolean).join(" → "),
+            });
+          }
+        } else {
+          const srcFile = fileNodes.find((n) => {
+            const b = nodeBottom(n);
+            return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
+          });
+          const tgtFile = fileNodes.find((n) => {
+            const t = nodeTop(n);
+            return Math.abs(t.x - edge.tx) < 1 && Math.abs(t.y - edge.ty) < 1;
+          });
+          const fileEdge = fileEdges.find((e) => e.id === hitId);
+          if (srcFile && tgtFile) {
+            setTooltip({
+              x: mx, y: my,
+              label: `${srcFile.label} → ${tgtFile.label}`,
+              sub: fileEdge ? `${fileEdge.callCount} call${fileEdge.callCount !== 1 ? "s" : ""}` : "",
+            });
+          }
+        }
+      }
+    } else {
+      if (hoveredEdgeId) {
+        setHoveredEdgeId(null);
+        setTooltip(null);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleEdges, viewMode, fileNodes, fileEdges, nodes, hoveredEdgeId]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredEdgeId(null);
+    setTooltip(null);
+  }, []);
+
+  const isEmpty = !nodes.length;
+
+  return (
+    <div
+      ref={containerRef}
+      className={styles.canvas}
+      onMouseDown={isEmpty ? undefined : onMouseDown}
+      onMouseMove={isEmpty ? undefined : onCanvasMouseMove}
+      onMouseLeave={isEmpty ? undefined : handleMouseLeave}
+    >
+      {/* Canvas layer — always mounted so refs are stable */}
+      <canvas ref={canvasRef} className={styles.canvasLayer} />
+
+      {isEmpty ? (
         <div className={styles.empty}>
           {loading ? (
             <>
@@ -420,306 +567,42 @@ export default function GraphCanvas({
             </>
           )}
         </div>
-      </div>
-    );
-  }
+      ) : (
+        <>
+          <NodeOverlay
+            viewMode={viewMode}
+            nodes={nodes}
+            fileNodes={fileNodes}
+            selectedNodeId={selectedNodeId}
+            selectedFileId={selectedFileId}
+            hoveredNodeId={hoveredNodeId}
+            effectiveHoveredEdgeId={effectiveHoveredEdgeId}
+            connectedIds={connectedIds}
+            colorFor={colorFor}
+            showLabels={showLabels}
+            onSelectNode={onSelectNode}
+            onSelectFile={onSelectFile}
+            onHoverNode={setHoveredNodeId}
+            isDragging={!!drag.current?.moved}
+            tx={transform.x}
+            ty={transform.y}
+            scale={transform.scale}
+          />
 
-  return (
-    <div className={styles.canvas}>
-      <svg
-        ref={svgRef}
-        className={styles.graph}
-        xmlns="http://www.w3.org/2000/svg"
-        onMouseDown={onMouseDown}
-        onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
-      >
-        <defs>
-          <pattern id="dot-grid"
-            x={transform.x % 24} y={transform.y % 24}
-            width="24" height="24" patternUnits="userSpaceOnUse">
-            <circle cx="0" cy="0" r="0.7" fill="#222222" />
-          </pattern>
-          <marker id="arrow-fn" markerWidth="7" markerHeight="7" refX="6" refY="3.5"
-            orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0.5 L0,6.5 L6,3.5 z" fill="context-stroke" />
-          </marker>
-          <marker id="arrow-file" markerWidth="8" markerHeight="8" refX="7" refY="4"
-            orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0.5 L0,7.5 L7,4 z" fill="context-stroke" />
-          </marker>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#dot-grid)" />
-
-        <g transform={`translate(${transform.x},${transform.y}) scale(${scale})`}>
-
-          {/* ════ FUNCTIONS VIEW ════ */}
-          {viewMode === "functions" && (
-            <>
-              {edges.map((edge) => {
-                const src = nodeMap.get(edge.source);
-                const tgt = nodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                // Hide unless both endpoints belong to the selected file
-                const hiddenByFile = selectedFileId !== null
-                  && !(src.file === selectedFileId && tgt.file === selectedFileId);
-                if (hiddenByFile) return null;
-                const isHovered = edge.id === effectiveHoveredEdgeId;
-                const isCrossFile = src.file && tgt.file && src.file !== tgt.file;
-                const stroke = colorFor(src.file).border;
-                const baseOp = isCrossFile ? fnEdgeOpacity + 0.3 : fnEdgeOpacity;
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={edge.id}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke={stroke}
-                    strokeWidth={(isCrossFile ? 1.8 : 1.2) * (isHovered ? 2.2 : 1)}
-                    fill="none"
-                    opacity={isHovered ? 1 : effectiveHoveredEdgeId ? baseOp * 0.4 : baseOp}
-                    markerEnd="url(#arrow-fn)"
-                    className={styles.edgePath}
-                  />
-                );
-              })}
-
-              {edges.map((edge) => {
-                const src = nodeMap.get(edge.source);
-                const tgt = nodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                // Don't register hit areas for edges hidden by file selection
-                const hiddenByFile = selectedFileId !== null
-                  && !(src.file === selectedFileId && tgt.file === selectedFileId);
-                if (hiddenByFile) return null;
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={`hit-${edge.id}`}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke="transparent" strokeWidth={12} fill="none"
-                    className={styles.hitArea}
-                    onMouseEnter={(e) => {
-                      if (drag.current?.moved) return;
-                      setHoveredEdgeId(edge.id);
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top,
-                        label: `${src.label} → ${tgt.label}`,
-                        sub: [src.file?.split("/").pop(), tgt.file?.split("/").pop()]
-                          .filter(Boolean).join(" → "),
-                      });
-                    }}
-                    onMouseMove={(e) => {
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip((p) => p ? { ...p, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
-                    }}
-                    onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
-                  />
-                );
-              })}
-
-              {nodes.map((node) => {
-                const isSelected = node.id === selectedNodeId;
-                const isVuln = !!node.vulnerability;
-                const isHot = !!node.isHot;
-                const isComplex = !!node.isComplex;
-                const color = colorFor(node.file);
-                const isConnected = connectedIds?.has(node.id) ?? false;
-                const isDimmedByFile = selectedFileId !== null && node.file !== selectedFileId;
-                const isDimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected;
-                const isNodeHovered = node.id === hoveredNodeId && !drag.current?.moved;
-                const fill = isSelected ? "#202020"
-                  : isNodeHovered ? "#1c1c1c"
-                  : isConnected ? "#1a1a1a"
-                  : (isHot || isComplex) ? "#161616"
-                  : "#111111";
-                const stroke = isSelected ? color.selected
-                  : isNodeHovered ? color.text
-                  : isConnected ? color.text
-                  : color.border;
-                const cx = node.x + node.width / 2;
-                const cy = node.y + node.height / 2;
-                return (
-                  <g key={node.id} className={styles.nodeGroup}
-                    opacity={isDimmedByFile ? 0.28 : isDimmedByEdge ? 0.28 : 1}
-                    onMouseEnter={() => setHoveredNodeId(node.id)}
-                    onMouseLeave={() => setHoveredNodeId(null)}
-                    onClick={(e) => { if (drag.current?.moved) return; e.stopPropagation(); onSelectNode(node.id); }}>
-                    {isVuln && (
-                      <rect x={node.x - 3} y={node.y - 3}
-                        width={node.width + 6} height={node.height + 6}
-                        rx={9} fill="none" stroke="#e03535" strokeWidth={1.5}
-                        className={styles.vulnRing} />
-                    )}
-                    <rect x={node.x} y={node.y} width={node.width} height={node.height}
-                      rx={6} fill={fill} stroke={stroke}
-                      strokeWidth={isSelected ? 1.5 : isNodeHovered ? 1.5 : isConnected ? 1.5 : 0.75} />
-                    {/* Top-edge highlight for depth */}
-                    <line
-                      x1={node.x + 6} y1={node.y + 0.5}
-                      x2={node.x + node.width - 6} y2={node.y + 0.5}
-                      stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-                      strokeLinecap="round" />
-                    {showLabels && (
-                      <>
-                        <text x={cx} y={cy - (node.kind ? 4 : 0)}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fill={LABEL_COLOR} fontFamily="'IBM Plex Mono', monospace"
-                          fontSize={11} fontWeight={isSelected || isConnected || isHot ? 500 : 400}>
-                          {node.label}
-                        </text>
-                        {node.kind && (
-                          <text x={cx} y={cy + 10}
-                            textAnchor="middle" dominantBaseline="middle"
-                            fill="rgba(255,255,255,0.15)" fontFamily="'IBM Plex Sans', sans-serif"
-                            fontSize={8} fontWeight={500}>
-                            {node.kind}
-                          </text>
-                        )}
-                      </>
-                    )}
-                  </g>
-                );
-              })}
-            </>
+          {tooltip && (
+            <div className={styles.tooltip}
+              style={{ left: tooltip.x + 14, top: tooltip.y - 14 }}>
+              <div className={styles.tooltipLabel}>{tooltip.label}</div>
+              {tooltip.sub && <div className={styles.tooltipSub}>{tooltip.sub}</div>}
+            </div>
           )}
 
-          {/* ════ FILES VIEW ════ */}
-          {viewMode === "files" && (
-            <>
-              {/* Edges (visible) */}
-              {fileEdges.map((edge) => {
-                const src = fileNodeMap.get(edge.source);
-                const tgt = fileNodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                const isHovered = edge.id === effectiveHoveredEdgeId;
-                const stroke = colorFor(src.id).border;
-                const w = Math.min(1.5 + edge.callCount * 0.5, 6);
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={edge.id}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke={stroke}
-                    strokeWidth={w * (isHovered ? 1.8 : 1)}
-                    fill="none"
-                    opacity={isHovered ? 1 : effectiveHoveredEdgeId ? 0.15 : 0.7}
-                    markerEnd="url(#arrow-file)"
-                    className={styles.edgePath}
-                  />
-                );
-              })}
-
-              {/* Edge hit areas */}
-              {fileEdges.map((edge) => {
-                const src = fileNodeMap.get(edge.source);
-                const tgt = fileNodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={`hit-${edge.id}`}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke="transparent" strokeWidth={18} fill="none"
-                    className={styles.hitArea}
-                    onMouseEnter={(e) => {
-                      if (drag.current?.moved) return;
-                      setHoveredEdgeId(edge.id);
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top,
-                        label: `${src.label} → ${tgt.label}`,
-                        sub: `${edge.callCount} call${edge.callCount !== 1 ? "s" : ""}`,
-                      });
-                    }}
-                    onMouseMove={(e) => {
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip((p) => p ? { ...p, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
-                    }}
-                    onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
-                  />
-                );
-              })}
-
-              {/* File nodes */}
-              {fileNodes.map((node) => {
-                const color = colorFor(node.id);
-                const isConnected = connectedIds?.has(node.id) ?? false;
-                const isActive = node.id === selectedFileId;
-                const dimmed = effectiveHoveredEdgeId !== null && !isConnected;
-                const stroke = node.hasVuln ? "#e03535"
-                  : isActive ? color.selected
-                  : isConnected ? color.text
-                  : color.border;
-                const fill = isActive || isConnected ? "#1c1c1c" : "#111111";
-                const cx = node.x + node.width / 2;
-                const nameY = node.y + node.height / 2 - 9;
-                const metaY = node.y + node.height / 2 + 10;
-                const tags = [
-                  node.fnCount + " fn",
-                  node.hasHot ? "hot" : null,
-                  node.hasVuln ? "vuln" : null,
-                ].filter(Boolean).join("  ·  ");
-
-                return (
-                  <g key={node.id} className={styles.fileNodeGroup}
-                    opacity={dimmed ? 0.28 : 1}
-                    onClick={() => { if (!drag.current?.moved) onSelectFile(node.id); }}>
-                    {/* Main box */}
-                    <rect x={node.x} y={node.y}
-                      width={node.width} height={node.height}
-                      rx={8} fill={fill} stroke={stroke}
-                      strokeWidth={isActive ? 1.5 : isConnected ? 1.5 : 0.75} />
-                    {/* Top-edge highlight */}
-                    <line
-                      x1={node.x + 8} y1={node.y + 0.5}
-                      x2={node.x + node.width - 8} y2={node.y + 0.5}
-                      stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-                      strokeLinecap="round" />
-                    {/* Colored accent bar */}
-                    <rect x={node.x + 1} y={node.y + 12}
-                      width={2.5} height={node.height - 24} rx={1.5}
-                      fill={color.border} opacity={0.8} />
-                    {showLabels && (
-                      <>
-                        <text x={cx} y={nameY}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fill={isActive ? color.selected : color.text}
-                          fontFamily="'IBM Plex Mono', monospace"
-                          fontSize={12} fontWeight={600}>
-                          {node.label}
-                        </text>
-                        <text x={cx} y={metaY}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fill={color.border}
-                          fontFamily="'IBM Plex Sans', sans-serif"
-                          fontSize={9} fontWeight={500}>
-                          {tags}
-                        </text>
-                      </>
-                    )}
-                  </g>
-                );
-              })}
-            </>
+          {hasSelection && onClearSelection && (
+            <button className={styles.showAllBtn} onClick={onClearSelection}>
+              esc · show all
+            </button>
           )}
-
-        </g>
-      </svg>
-
-      {tooltip && (
-        <div className={styles.tooltip}
-          style={{ left: tooltip.x + 14, top: tooltip.y - 14 }}>
-          <div className={styles.tooltipLabel}>{tooltip.label}</div>
-          {tooltip.sub && <div className={styles.tooltipSub}>{tooltip.sub}</div>}
-        </div>
-      )}
-
-      {hasSelection && onClearSelection && (
-        <button className={styles.showAllBtn} onClick={onClearSelection}>
-          esc · show all
-        </button>
+        </>
       )}
     </div>
   );

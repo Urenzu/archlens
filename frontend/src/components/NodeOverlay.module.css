@@ -1,0 +1,194 @@
+/* ── Node overlay: HTML div nodes positioned over the canvas ── */
+
+.nodeLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.worldContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* ── Function node ── */
+
+.node {
+  position: absolute;
+  pointer-events: all;
+  cursor: pointer;
+  border-radius: 6px;
+  background: #111111;
+  border: 0.75px solid var(--node-border);
+  transition: opacity 0.12s, background 0.1s, border-color 0.1s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.node[data-selected="true"] {
+  background: #202020;
+  border-width: 1.5px;
+}
+
+.node[data-hovered="true"] {
+  background: #1c1c1c;
+  border-width: 1.5px;
+}
+
+.node[data-connected="true"] {
+  background: #1a1a1a;
+  border-width: 1.5px;
+}
+
+.node[data-hot="true"],
+.node[data-complex="true"] {
+  background: #161616;
+}
+
+.node[data-dimmed="true"] {
+  opacity: 0.28;
+}
+
+/* ── File node ── */
+
+.fileNode {
+  position: absolute;
+  pointer-events: all;
+  cursor: pointer;
+  border-radius: 8px;
+  background: #111111;
+  border: 0.75px solid var(--node-border);
+  transition: opacity 0.12s, background 0.1s, border-color 0.1s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.fileNode[data-active="true"],
+.fileNode[data-connected="true"] {
+  background: #1c1c1c;
+  border-width: 1.5px;
+}
+
+.fileNode[data-dimmed="true"] {
+  opacity: 0.28;
+}
+
+/* ── Top-edge highlight (shared) ── */
+
+.highlight {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.fileNode .highlight {
+  left: 8px;
+  right: 8px;
+}
+
+/* ── Accent bar (file node) ── */
+
+.accentBar {
+  position: absolute;
+  left: 1px;
+  top: 12px;
+  bottom: 12px;
+  width: 2.5px;
+  border-radius: 1.5px;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+/* ── Labels ── */
+
+.label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #888888;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  padding: 0 4px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.node[data-selected="true"] .label,
+.node[data-connected="true"] .label,
+.node[data-hot="true"] .label {
+  font-weight: 500;
+}
+
+.kind {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.15);
+  font-weight: 500;
+  margin-top: 2px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ── File node labels ── */
+
+.fileLabel {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  padding: 0 8px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.fileMeta {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  margin-top: 6px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ── Vuln ring ── */
+
+@keyframes vulnPulse {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 0.15; }
+}
+
+.vulnRing {
+  position: absolute;
+  inset: -3px;
+  border: 1.5px solid #e03535;
+  border-radius: 9px;
+  animation: vulnPulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}

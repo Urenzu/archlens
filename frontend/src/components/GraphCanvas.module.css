@@ -38,21 +38,13 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: background 0.12s, color 0.12s, border-color 0.12s;
   animation: showAllIn 0.18s ease;
+  z-index: 20;
 }
 
 .showAllBtn:hover {
   background: rgba(18, 18, 18, 0.88);
   color: var(--text);
   border-color: rgba(255, 255, 255, 0.18);
-}
-
-@keyframes vulnPulse {
-  0%, 100% { opacity: 0.75; }
-  50%       { opacity: 0.15; }
-}
-
-.vulnRing {
-  animation: vulnPulse 2.2s ease-in-out infinite;
 }
 
 .empty {
@@ -88,37 +80,22 @@
   inset: 0;
   overflow: hidden;
   background: var(--bg);
-}
-
-.graph {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   cursor: grab;
   user-select: none;
 }
 
-.graph:active {
+.canvas:active {
   cursor: grabbing;
 }
 
-.nodeGroup {
-  cursor: pointer;
-  transition: opacity 0.12s;
-}
-
-.fileNodeGroup {
-  cursor: pointer;
-  transition: opacity 0.12s;
-}
-
-.edgePath {
-  transition: opacity 0.1s, stroke-width 0.1s;
-}
-
-.hitArea {
-  cursor: crosshair;
+.canvasLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* ── Tooltip ── */
