@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import type { GraphNode, GraphEdge, FileGraphEdge } from "../types/graph";
+import type { GraphNode, GraphEdge, FileGraphEdge, Layer } from "../types/graph";
 import { fileColor, assignFileColors } from "../lib/fileColors";
 import { drawFrame, hitTestEdge, type VisibleEdge } from "../lib/canvasRenderer";
 import NodeOverlay from "./NodeOverlay";
@@ -17,6 +17,7 @@ interface Props {
   loading?: boolean;
   hasSelection?: boolean;
   onClearSelection?: () => void;
+  focusedLayer?: Layer | null;
 }
 
 interface Transform { x: number; y: number; scale: number; }
@@ -38,6 +39,7 @@ interface FileNode {
   fnCount: number;
   hasVuln: boolean;
   hasHot: boolean;
+  layer?: Layer;
 }
 
 interface FileEdge {
@@ -160,6 +162,7 @@ function buildFileGraph(
       fnCount: fns.length,
       hasVuln: fns.some((n) => !!n.vulnerability),
       hasHot: fns.some((n) => !!n.isHot),
+      layer: fns[0]?.layer,
     };
   });
 
@@ -169,6 +172,7 @@ function buildFileGraph(
 export default function GraphCanvas({
   nodes, edges, fileEdges: apiFileEdges, selectedNodeId, selectedFileId,
   onSelectNode, onSelectFile, viewMode, loading, hasSelection, onClearSelection,
+  focusedLayer,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -265,6 +269,8 @@ export default function GraphCanvas({
         const hiddenByFile = selectedFileId !== null
           && !(src.file === selectedFileId && tgt.file === selectedFileId);
         if (hiddenByFile) continue;
+        // When a layer is focused, only show edges where at least one endpoint is in that layer
+        if (focusedLayer && src.layer !== focusedLayer && tgt.layer !== focusedLayer) continue;
         const isCrossFile = src.file && tgt.file && src.file !== tgt.file;
         const stroke = colorFor(src.file).border;
         const b = nodeBottom(src);
@@ -285,6 +291,8 @@ export default function GraphCanvas({
         const src = fileNodeMap.get(edge.source);
         const tgt = fileNodeMap.get(edge.target);
         if (!src || !tgt) continue;
+        // When a layer is focused, only show edges where at least one endpoint is in that layer
+        if (focusedLayer && src.layer !== focusedLayer && tgt.layer !== focusedLayer) continue;
         const stroke = colorFor(src.id).border;
         const w = Math.min(1.5 + edge.callCount * 0.5, 6);
         const b = nodeBottom(src);
@@ -301,7 +309,7 @@ export default function GraphCanvas({
       return result;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges, fileEdges, nodeMap, fileNodeMap, viewMode, selectedFileId]);
+  }, [edges, fileEdges, nodeMap, fileNodeMap, viewMode, selectedFileId, focusedLayer]);
 
   // Keep a ref so the rAF callback always reads the latest edges without re-creating
   const visibleEdgesRef = useRef(visibleEdges);
@@ -636,6 +644,7 @@ export default function GraphCanvas({
             onHoverNode={setHoveredNodeId}
             isDragging={!!drag.current?.moved}
             worldContainerRef={worldContainerRef}
+            focusedLayer={focusedLayer ?? null}
           />
 
           {tooltip && (

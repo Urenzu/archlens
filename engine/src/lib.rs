@@ -1,4 +1,5 @@
 pub mod analyze;
+pub mod classifier;
 pub mod graph;
 pub mod hotpath;
 pub mod layout;

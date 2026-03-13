@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::classifier;
 use crate::graph::build_graph;
 use crate::hotpath::flag_hotpaths;
 use crate::layout::compute_layout;
 use crate::models::{AnalysisResult, FileEdge, Module, RepoStats};
-use crate::parser::{go, python};
+use crate::parser::{go, python, typescript};
 use crate::parser::ModuleInfo;
 
 /// Input file for analysis: relative path and source content.
@@ -40,17 +41,34 @@ pub fn analyze_files(files: Vec<InputFile>) -> AnalysisResult {
             python::parse_file(&file.content, &file.path)
         } else if file.path.ends_with(".go") {
             go::parse_file(&file.content, &file.path)
+        } else if file.path.ends_with(".ts") || file.path.ends_with(".tsx")
+               || file.path.ends_with(".js") || file.path.ends_with(".jsx") {
+            typescript::parse_file(&file.content, &file.path)
         } else {
             None
         };
 
-        if let Some(module) = parsed {
+        if let Some(mut module) = parsed {
+            module.layer = classifier::classify(&file.path, &module.imports);
             modules.push(module);
         }
     }
 
     // 2-5. Build graph nodes, edges, compute degrees
     let (mut nodes, mut edges, callers_map) = build_graph(&modules);
+
+    // Propagate layer from file → node
+    let file_layer: HashMap<String, crate::models::Layer> = modules
+        .iter()
+        .map(|m| (m.path.clone(), m.layer.clone()))
+        .collect();
+    for node in &mut nodes {
+        if let Some(ref file) = node.file {
+            if let Some(layer) = file_layer.get(file) {
+                node.layer = Some(layer.clone());
+            }
+        }
+    }
 
     // 6. Mark hot/complex nodes and critical edges
     flag_hotpaths(&mut nodes, &mut edges);

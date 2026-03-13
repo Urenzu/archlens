@@ -1,5 +1,8 @@
 pub mod go;
 pub mod python;
+pub mod typescript;
+
+use crate::models::Layer;
 
 /// Information about a parsed function.
 #[derive(Debug, Clone)]
@@ -37,4 +40,5 @@ pub struct ModuleInfo {
     pub functions: Vec<FunctionInfo>,
     pub classes: Vec<ClassInfo>,
     pub imports: Vec<String>,
+    pub layer: Layer,
 }

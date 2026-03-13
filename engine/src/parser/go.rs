@@ -26,6 +26,7 @@ pub fn parse_file(source: &str, relative_path: &str) -> Option<ModuleInfo> {
         functions: Vec::new(),
         classes: Vec::new(),
         imports: Vec::new(),
+        layer: crate::models::Layer::Unknown,
     };
 
     let mut cursor = root.walk();

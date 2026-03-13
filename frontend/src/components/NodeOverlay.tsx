@@ -1,5 +1,5 @@
 import { type RefObject } from "react";
-import type { GraphNode } from "../types/graph";
+import type { GraphNode, Layer } from "../types/graph";
 import type { FileColor } from "../lib/fileColors";
 import styles from "./NodeOverlay.module.css";
 
@@ -13,6 +13,7 @@ interface FileNode {
   fnCount: number;
   hasVuln: boolean;
   hasHot: boolean;
+  layer?: Layer;
 }
 
 interface Props {
@@ -34,13 +35,14 @@ interface Props {
   // The transform container ref — GraphCanvas updates style.transform directly
   // (bypassing React to keep canvas + nodes in sync every rAF).
   worldContainerRef: RefObject<HTMLDivElement | null>;
+  focusedLayer: Layer | null;
 }
 
 export default function NodeOverlay({
   viewMode, nodes, selectedNodeId, selectedFileId,
   hoveredNodeId, effectiveHoveredEdgeId, connectedIds, colorFor,
   onSelectNode, onSelectFile, onHoverNode, isDragging,
-  fileNodes, worldContainerRef,
+  fileNodes, worldContainerRef, focusedLayer,
 }: Props) {
   return (
     <div
@@ -60,6 +62,7 @@ export default function NodeOverlay({
           const isDimmedByFile = selectedFileId !== null && node.file !== selectedFileId;
           const isNodeHovered = node.id === hoveredNodeId && !isDragging;
           const isDimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected && !isNodeHovered && !isSelected;
+          const isDimmedByLayer = focusedLayer !== null && node.layer !== focusedLayer;
           const color = colorFor(node.file);
           const borderColor = isSelected ? color.selected
             : isNodeHovered ? color.text
@@ -82,7 +85,7 @@ export default function NodeOverlay({
               data-connected={isConnected || undefined}
               data-hot={isHot || undefined}
               data-complex={isComplex || undefined}
-              data-dimmed={isDimmedByFile || isDimmedByEdge || undefined}
+              data-dimmed={isDimmedByFile || isDimmedByEdge || isDimmedByLayer || undefined}
               onMouseEnter={() => onHoverNode(node.id)}
               onMouseLeave={() => onHoverNode(null)}
               onClick={(e) => { e.stopPropagation(); onSelectNode(node.id); }}
@@ -99,7 +102,9 @@ export default function NodeOverlay({
           const color = colorFor(node.id);
           const isConnected = connectedIds?.has(node.id) ?? false;
           const isActive = node.id === selectedFileId;
-          const dimmed = effectiveHoveredEdgeId !== null && !isConnected && !isActive;
+          const dimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected && !isActive;
+          const dimmedByLayer = focusedLayer !== null && node.layer !== focusedLayer;
+          const dimmed = dimmedByEdge || dimmedByLayer;
           const borderColor = node.hasVuln ? "#e03535"
             : isActive ? color.selected
             : isConnected ? color.text

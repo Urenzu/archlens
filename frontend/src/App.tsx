@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import type { AnalysisResult, RepoStats } from "./types/graph";
+import type { AnalysisResult, Layer, RepoStats } from "./types/graph";
 import { analyzeRepo } from "./api";
 import Topbar from "./components/Topbar";
 import SidebarLeft from "./components/SidebarLeft";
@@ -30,6 +30,7 @@ export default function App() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"functions" | "files">("functions");
+  const [focusedLayer, setFocusedLayer] = useState<Layer | null>(null);
 
   const leftRef  = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,7 @@ export default function App() {
       setData(result);
       setSelectedNodeId(null);
       setSelectedFileId(null);
+      setFocusedLayer(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
     } finally {
@@ -144,6 +146,7 @@ export default function App() {
           loading={loading}
           hasSelection={!!(selectedFileId || selectedNodeId)}
           onClearSelection={clearSelection}
+          focusedLayer={focusedLayer}
         />
         <div ref={leftRef} className={styles.panelLeft}>
           <SidebarLeft
@@ -152,6 +155,8 @@ export default function App() {
             selectedFileId={selectedFileId}
             onSelectNode={handleSelectNode}
             onSelectFile={handleSelectFile}
+            focusedLayer={focusedLayer}
+            onFocusLayer={setFocusedLayer}
           />
           <ResizeHandle side="left" panelRef={leftRef} />
         </div>

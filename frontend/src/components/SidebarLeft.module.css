@@ -27,6 +27,78 @@
   padding: 0 16px 12px;
 }
 
+/* ── Layer groups ── */
+
+.layerGroup {
+  transition: opacity 0.15s;
+}
+
+.layerDimmed {
+  opacity: 0.3;
+}
+
+.layerRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px 8px 12px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-left: 2px solid transparent;
+  transition: color 0.12s, background 0.12s;
+  margin-top: 4px;
+}
+
+.layerRow:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.layerActive {
+  color: var(--text);
+  border-left-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.layerChevron {
+  font-size: 9px;
+  width: 10px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.layerLabel {
+  flex: 1;
+}
+
+.layerCount {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-faint);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.focusBadge {
+  font-family: var(--font-ui);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  text-transform: none;
+  flex-shrink: 0;
+}
+
 /* ── File rows ── */
 
 .fileRow {

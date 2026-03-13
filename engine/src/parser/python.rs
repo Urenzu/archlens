@@ -29,6 +29,7 @@ pub fn parse_file(source: &str, relative_path: &str) -> Option<ModuleInfo> {
         functions: Vec::new(),
         classes: Vec::new(),
         imports: Vec::new(),
+        layer: crate::models::Layer::Unknown,
     };
 
     // Iterate top-level children only (like Python's ast.iter_child_nodes(tree))

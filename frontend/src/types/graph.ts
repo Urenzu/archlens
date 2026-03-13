@@ -1,4 +1,5 @@
 export type NodeKind = "function" | "class" | "module";
+export type Layer = "frontend" | "backend" | "shared" | "config" | "unknown";
 
 export interface GraphNode {
   id: string;
@@ -13,6 +14,7 @@ export interface GraphNode {
   isComplex?: boolean;
   vulnerability?: string;
   file?: string;
+  layer?: Layer;
 }
 
 export interface NodeMetrics {

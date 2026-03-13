@@ -37,6 +37,17 @@ pub enum NodeKind {
     Module,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Layer {
+    Frontend,
+    Backend,
+    Shared,
+    Config,
+    #[default]
+    Unknown,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphNode {
     pub id: String,
@@ -59,6 +70,8 @@ pub struct GraphNode {
     pub vulnerability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layer: Option<Layer>,
 }
 
 impl GraphNode {
@@ -76,6 +89,7 @@ impl GraphNode {
             is_complex: None,
             vulnerability: None,
             file: None,
+            layer: None,
         }
     }
 }
