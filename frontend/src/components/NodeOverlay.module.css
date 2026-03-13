@@ -18,13 +18,18 @@
 
 /* ── Function node ── */
 
+/* --scale is set on .worldContainer by the rAF loop so border widths stay
+   visually constant (~1px) regardless of the current zoom level. Without this,
+   a 0.75px border at scale 0.3 renders at 0.225px — below one physical pixel —
+   causing it to flicker as the transform shifts by sub-pixel amounts. */
+
 .node {
   position: absolute;
   pointer-events: all;
   cursor: pointer;
   border-radius: 6px;
   background: #111111;
-  border: 0.75px solid var(--node-border);
+  border: clamp(0.25px, calc(1px / var(--scale, 1)), 8px) solid var(--node-border);
   transition: opacity 0.12s, background 0.1s, border-color 0.1s;
   overflow: hidden;
   display: flex;
@@ -32,21 +37,23 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  /* Limit browser style/layout recalc to this element's subtree */
+  contain: layout style;
 }
 
 .node[data-selected="true"] {
   background: #202020;
-  border-width: 1.5px;
+  border-width: clamp(0.25px, calc(1.5px / var(--scale, 1)), 12px);
 }
 
 .node[data-hovered="true"] {
   background: #1c1c1c;
-  border-width: 1.5px;
+  border-width: clamp(0.25px, calc(1.5px / var(--scale, 1)), 12px);
 }
 
 .node[data-connected="true"] {
   background: #1a1a1a;
-  border-width: 1.5px;
+  border-width: clamp(0.25px, calc(1.5px / var(--scale, 1)), 12px);
 }
 
 .node[data-hot="true"],
@@ -66,7 +73,7 @@
   cursor: pointer;
   border-radius: 8px;
   background: #111111;
-  border: 0.75px solid var(--node-border);
+  border: clamp(0.25px, calc(1px / var(--scale, 1)), 8px) solid var(--node-border);
   transition: opacity 0.12s, background 0.1s, border-color 0.1s;
   overflow: hidden;
   display: flex;
@@ -74,12 +81,13 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  contain: layout style;
 }
 
 .fileNode[data-active="true"],
 .fileNode[data-connected="true"] {
   background: #1c1c1c;
-  border-width: 1.5px;
+  border-width: clamp(0.25px, calc(1.5px / var(--scale, 1)), 12px);
 }
 
 .fileNode[data-dimmed="true"] {
@@ -177,6 +185,17 @@
   pointer-events: none;
 }
 
+/* ── LOD: hide labels when zoomed out (class toggled directly from rAF) ── */
+/* Uses a plain global class (not a CSS Module name) so classList.toggle()
+   matches without needing the mangled module identifier. */
+
+:global(.labelsHidden) .label,
+:global(.labelsHidden) .kind,
+:global(.labelsHidden) .fileLabel,
+:global(.labelsHidden) .fileMeta {
+  display: none;
+}
+
 /* ── Vuln ring ── */
 
 @keyframes vulnPulse {
@@ -187,7 +206,7 @@
 .vulnRing {
   position: absolute;
   inset: -3px;
-  border: 1.5px solid #e03535;
+  border: clamp(0.25px, calc(1.5px / var(--scale, 1)), 12px) solid #e03535;
   border-radius: 9px;
   animation: vulnPulse 2.2s ease-in-out infinite;
   pointer-events: none;

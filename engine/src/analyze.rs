@@ -5,7 +5,7 @@ use crate::graph::build_graph;
 use crate::hotpath::flag_hotpaths;
 use crate::layout::compute_layout;
 use crate::models::{AnalysisResult, FileEdge, Module, RepoStats};
-use crate::parser::python;
+use crate::parser::{go, python};
 use crate::parser::ModuleInfo;
 
 /// Input file for analysis: relative path and source content.
@@ -36,12 +36,15 @@ pub fn analyze_files(files: Vec<InputFile>) -> AnalysisResult {
             continue;
         }
 
-        // Only parse .py files
-        if !file.path.ends_with(".py") {
-            continue;
-        }
+        let parsed = if file.path.ends_with(".py") {
+            python::parse_file(&file.content, &file.path)
+        } else if file.path.ends_with(".go") {
+            go::parse_file(&file.content, &file.path)
+        } else {
+            None
+        };
 
-        if let Some(module) = python::parse_file(&file.content, &file.path) {
+        if let Some(module) = parsed {
             modules.push(module);
         }
     }

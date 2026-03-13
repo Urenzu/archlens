@@ -1,3 +1,4 @@
+pub mod go;
 pub mod python;
 
 /// Information about a parsed function.

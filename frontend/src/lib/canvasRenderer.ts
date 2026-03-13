@@ -5,9 +5,8 @@ export interface VisibleEdge {
   sx: number; sy: number; // source anchor (world coords)
   tx: number; ty: number; // target anchor (world coords)
   color: string;
-  width: number;
-  opacity: number;
-  isHovered: boolean;
+  width: number;    // base width  — hover multiplier applied in drawFrame
+  opacity: number;  // base opacity — hover multiplier applied in drawFrame
 }
 
 export interface DrawParams {
@@ -19,6 +18,10 @@ export interface DrawParams {
   ty: number;       // transform y (CSS pixels)
   scale: number;    // zoom scale
   edges: VisibleEdge[];
+  /** ID of the currently hovered edge — hover effects are applied here, not pre-baked into edges. */
+  hoveredEdgeId?: string | null;
+  /** Multiplier applied to all edge opacities (use 0.5 at extreme zoom-out for LOD thinning). */
+  opacityScale?: number;
 }
 
 const DOT_SPACING = 24;
@@ -54,21 +57,27 @@ export function drawFrame(p: DrawParams): void {
   ctx.translate(tx, ty);
   ctx.scale(scale, scale);
 
-  // ── Draw edges (non-hovered first, then hovered on top) ─
+  // ── Draw edges — hover state applied dynamically (not pre-baked) ─
+  // This lets us change the hovered edge without rebuilding the edges array.
+  const opMul = p.opacityScale ?? 1;
+  const hid = p.hoveredEdgeId ?? null;
+  const anyHovered = hid !== null;
+  let hoveredEdge: VisibleEdge | undefined;
+
   for (const e of edges) {
-    if (e.isHovered) continue;
-    drawEdge(ctx, e, scale);
+    if (e.id === hid) { hoveredEdge = e; continue; } // draw hovered last (on top)
+    const op = (anyHovered ? e.opacity * 0.4 : e.opacity) * opMul;
+    drawEdge(ctx, e, scale, op, e.width);
   }
-  for (const e of edges) {
-    if (!e.isHovered) continue;
-    drawEdge(ctx, e, scale);
+  if (hoveredEdge) {
+    drawEdge(ctx, hoveredEdge, scale, opMul, hoveredEdge.width * 2.2);
   }
 
   ctx.restore();
 }
 
-function drawEdge(ctx: CanvasRenderingContext2D, e: VisibleEdge, worldScale: number): void {
-  const { sx, sy, color, width, opacity } = e;
+function drawEdge(ctx: CanvasRenderingContext2D, e: VisibleEdge, worldScale: number, opacity: number, width: number): void {
+  const { sx, sy, color } = e;
   // Rename to avoid shadowing — edge target coords
   const etx = e.tx;
   const ety = e.ty;
@@ -95,7 +104,7 @@ function drawEdge(ctx: CanvasRenderingContext2D, e: VisibleEdge, worldScale: num
   const py = mt*mt*mt*sy + 3*mt*mt*prevT*midY + 3*mt*prevT*prevT*midY + prevT*prevT*prevT*ety;
   const angle = Math.atan2(ety - py, etx - px);
 
-  const arrowLen = ARROW_SIZE * Math.min(width, 2.5) / worldScale;
+  const arrowLen = ARROW_SIZE * Math.min(width, 5) / worldScale;
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(etx, ety);

@@ -172,8 +172,15 @@ export default function GraphCanvas({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const worldContainerRef = useRef<HTMLDivElement>(null);
   const activeNodesRef = useRef<(GraphNode | FileNode)[]>([]);
-  const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
+
+  // ── Transform is ref-only during pan/zoom — never goes through React ──────
+  // This is the key fix: both the canvas draw and the NodeOverlay CSS transform
+  // are updated inside the same requestAnimationFrame callback, so they are
+  // always in sync and never tear.
+  const transformRef = useRef<Transform>({ x: 0, y: 0, scale: 1 });
+
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
   const drag = useRef<{
@@ -184,7 +191,15 @@ export default function GraphCanvas({
   const lastPos = useRef({ x: 0, y: 0, t: 0 });
   const inertiaFrame = useRef<number | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const frameRef = useRef<number>(0);
+
+  // Pending rAF handle — always cancel-then-reschedule so StrictMode double-invocation
+  // doesn't leave a stuck "pending" flag (unlike a boolean guard).
+  const rafRef = useRef<number>(0);
+  // Ref mirror of hoveredEdgeId so the rAF can read it without capturing stale state.
+  const hoveredEdgeIdRef = useRef<string | null>(null);
+  hoveredEdgeIdRef.current = hoveredEdgeId;
+  // Gate for hit-test throttling — only one hit test per animation frame.
+  const hitRafRef = useRef<number>(0);
 
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -236,11 +251,10 @@ export default function GraphCanvas({
     [hoveredEdge],
   );
 
-  const scale = transform.scale;
-  const showLabels = scale >= LOD_HIDE_LABELS;
-  const fnEdgeOpacity = scale < LOD_THIN_EDGES ? 0.25 : 0.5;
-
   // ── Build visible edges for the canvas renderer ────────────────────────────
+  // Hover state is intentionally NOT baked in here — it's applied dynamically in
+  // drawFrame via hoveredEdgeId. This means edge hover changes don't trigger an
+  // O(edges) array rebuild + React re-render cycle; they just schedule one rAF.
   const visibleEdges: VisibleEdge[] = useMemo(() => {
     if (viewMode === "functions") {
       const result: VisibleEdge[] = [];
@@ -251,10 +265,8 @@ export default function GraphCanvas({
         const hiddenByFile = selectedFileId !== null
           && !(src.file === selectedFileId && tgt.file === selectedFileId);
         if (hiddenByFile) continue;
-        const isHovered = edge.id === effectiveHoveredEdgeId;
         const isCrossFile = src.file && tgt.file && src.file !== tgt.file;
         const stroke = colorFor(src.file).border;
-        const baseOp = isCrossFile ? fnEdgeOpacity + 0.3 : fnEdgeOpacity;
         const b = nodeBottom(src);
         const t = nodeTop(tgt);
         result.push({
@@ -262,9 +274,8 @@ export default function GraphCanvas({
           sx: b.x, sy: b.y,
           tx: t.x, ty: t.y,
           color: stroke,
-          width: (isCrossFile ? 1.8 : 1.2) * (isHovered ? 2.2 : 1),
-          opacity: isHovered ? 1 : effectiveHoveredEdgeId ? baseOp * 0.4 : baseOp,
-          isHovered,
+          width: isCrossFile ? 1.8 : 1.2,
+          opacity: isCrossFile ? 0.8 : 0.5,
         });
       }
       return result;
@@ -274,7 +285,6 @@ export default function GraphCanvas({
         const src = fileNodeMap.get(edge.source);
         const tgt = fileNodeMap.get(edge.target);
         if (!src || !tgt) continue;
-        const isHovered = edge.id === effectiveHoveredEdgeId;
         const stroke = colorFor(src.id).border;
         const w = Math.min(1.5 + edge.callCount * 0.5, 6);
         const b = nodeBottom(src);
@@ -284,49 +294,77 @@ export default function GraphCanvas({
           sx: b.x, sy: b.y,
           tx: t.x, ty: t.y,
           color: stroke,
-          width: w * (isHovered ? 1.8 : 1),
-          opacity: isHovered ? 1 : effectiveHoveredEdgeId ? 0.15 : 0.7,
-          isHovered,
+          width: w,
+          opacity: 0.7,
         });
       }
       return result;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges, fileEdges, nodeMap, fileNodeMap, viewMode, selectedFileId, effectiveHoveredEdgeId, fnEdgeOpacity]);
+  }, [edges, fileEdges, nodeMap, fileNodeMap, viewMode, selectedFileId]);
 
-  // ── Canvas draw loop (also handles buffer sizing) ──────────────────────────
-  useEffect(() => {
-    cancelAnimationFrame(frameRef.current);
-    frameRef.current = requestAnimationFrame(() => {
+  // Keep a ref so the rAF callback always reads the latest edges without re-creating
+  const visibleEdgesRef = useRef(visibleEdges);
+  visibleEdgesRef.current = visibleEdges;
+
+  // ── Unified rAF draw ───────────────────────────────────────────────────────
+  // Both canvas and NodeOverlay CSS transform are updated here, atomically,
+  // in the same frame — eliminating the 1-frame offset that caused tearing.
+  //
+  // Uses cancel-then-reschedule (not a boolean "pending" flag) so that React
+  // StrictMode's cleanup-between-double-invocations can't leave a stuck flag.
+  const requestDraw = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const t = transformRef.current;
+
+      // 1. Resize + draw canvas
       const canvas = canvasRef.current;
-      if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
-
-      // Lazy-size the buffer to match the CSS display size every frame.
-      // This self-corrects any sizing issues regardless of mount timing.
-      const rect = canvas.getBoundingClientRect();
-      const bufW = Math.round(rect.width * dpr);
-      const bufH = Math.round(rect.height * dpr);
-      if (bufW === 0 || bufH === 0) return; // container not laid out yet
-      if (canvas.width !== bufW || canvas.height !== bufH) {
-        canvas.width = bufW;
-        canvas.height = bufH;
+      if (canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const bufW = Math.round(rect.width * dpr);
+        const bufH = Math.round(rect.height * dpr);
+        if (bufW > 0 && bufH > 0) {
+          if (canvas.width !== bufW || canvas.height !== bufH) {
+            canvas.width = bufW;
+            canvas.height = bufH;
+          }
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            drawFrame({
+              ctx,
+              width: canvas.width,
+              height: canvas.height,
+              dpr,
+              tx: t.x,
+              ty: t.y,
+              scale: t.scale,
+              edges: visibleEdgesRef.current,
+              hoveredEdgeId: hoveredEdgeIdRef.current,
+              opacityScale: t.scale < LOD_THIN_EDGES ? 0.5 : 1,
+            });
+          }
+        }
       }
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      drawFrame({
-        ctx,
-        width: canvas.width,
-        height: canvas.height,
-        dpr,
-        tx: transform.x,
-        ty: transform.y,
-        scale: transform.scale,
-        edges: visibleEdges,
-      });
+      // 2. NodeOverlay transform — same frame, no tearing
+      const wc = worldContainerRef.current;
+      if (wc) {
+        wc.style.transform = `translate(${t.x}px,${t.y}px) scale(${t.scale})`;
+        // Expose scale so CSS can compensate border widths (prevents sub-pixel flicker)
+        wc.style.setProperty("--scale", String(t.scale));
+        // LOD: toggle a plain (non-module) class so we can reference it from CSS
+        wc.classList.toggle("labelsHidden", t.scale < LOD_HIDE_LABELS);
+      }
     });
-  }, [transform, visibleEdges]);
+  }, []);
+
+  // Redraw when edges change (data/selection) or hover state changes.
+  // hoveredEdgeId triggers a draw but NOT a visibleEdges recompute (by design).
+  useEffect(() => {
+    requestDraw();
+  }, [visibleEdges, hoveredEdgeId, requestDraw]);
 
   // ── Fit view ───────────────────────────────────────────────────────────────
   const fitView = useCallback((ns: (GraphNode | FileNode)[]) => {
@@ -343,12 +381,13 @@ export default function GraphCanvas({
     const graphW = maxX - minX + PAD * 2;
     const graphH = maxY - minY + PAD * 2;
     const s = Math.min(width / graphW, height / graphH, 1);
-    setTransform({
+    transformRef.current = {
       x: (width  - graphW * s) / 2 - minX * s + PAD * s,
       y: (height - graphH * s) / 2 - minY * s + PAD * s,
       scale: s,
-    });
-  }, []);
+    };
+    requestDraw();
+  }, [requestDraw]);
 
   // Re-fit when nodes or viewMode change
   useEffect(() => {
@@ -358,9 +397,11 @@ export default function GraphCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, nodes]);
 
-  // Cancel inertia on unmount
+  // Cancel pending rAFs on unmount
   useEffect(() => () => {
     if (inertiaFrame.current !== null) cancelAnimationFrame(inertiaFrame.current);
+    cancelAnimationFrame(rafRef.current);
+    cancelAnimationFrame(hitRafRef.current);
   }, []);
 
   // Re-fit when the container is resized (sidebar toggle / drag)
@@ -392,27 +433,24 @@ export default function GraphCanvas({
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    setTransform((prev) => {
-      const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
-      return {
-        x: mx - ((mx - prev.x) / prev.scale) * s,
-        y: my - ((my - prev.y) / prev.scale) * s,
-        scale: s,
-      };
-    });
-  }, []);
+    const prev = transformRef.current;
+    const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
+    transformRef.current = {
+      x: mx - ((mx - prev.x) / prev.scale) * s,
+      y: my - ((my - prev.y) / prev.scale) * s,
+      scale: s,
+    };
+    requestDraw();
+  }, [requestDraw]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [onWheel, nodes]);
+  }, [onWheel]);
 
   // ── Pan / drag ─────────────────────────────────────────────────────────────
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
-
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if (inertiaFrame.current !== null) {
@@ -445,7 +483,10 @@ export default function GraphCanvas({
           };
         }
         lastPos.current = { x: ev.clientX, y: ev.clientY, t: now };
-        setTransform((prev) => ({ ...prev, x: startTx + dx, y: startTy + dy }));
+        // Update ref directly — no React state, no re-render
+        const prev = transformRef.current;
+        transformRef.current = { ...prev, x: startTx + dx, y: startTy + dy };
+        requestDraw();
       }
     }
 
@@ -463,7 +504,9 @@ export default function GraphCanvas({
           return;
         }
         const { vx, vy } = velocity.current;
-        setTransform((prev) => ({ ...prev, x: prev.x + vx, y: prev.y + vy }));
+        const prev = transformRef.current;
+        transformRef.current = { ...prev, x: prev.x + vx, y: prev.y + vy };
+        requestDraw();
         inertiaFrame.current = requestAnimationFrame(animate);
       }
       if (Math.hypot(velocity.current.vx, velocity.current.vy) > MIN_VEL) {
@@ -473,67 +516,76 @@ export default function GraphCanvas({
 
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
-  }, []);
+  }, [requestDraw]);
 
   // ── Edge hit testing on mouse move ─────────────────────────────────────────
+  // Throttled to one test per animation frame via cancel+reschedule.
+  // hitTestEdge is O(edges×samples) — running it 300+/sec on raw mousemove events
+  // is a major performance drain; capping at ~60/sec costs nothing perceptible.
   const onCanvasMouseMove = useCallback((e: React.MouseEvent) => {
     if (drag.current?.moved) return;
-    const rect = containerRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const worldX = (mx - transformRef.current.x) / transformRef.current.scale;
-    const worldY = (my - transformRef.current.y) / transformRef.current.scale;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
 
-    const hitId = hitTestEdge(visibleEdges, worldX, worldY, EDGE_HIT_THRESHOLD, transformRef.current.scale);
+    cancelAnimationFrame(hitRafRef.current);
+    hitRafRef.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
+      const t = transformRef.current;
+      const worldX = (mx - t.x) / t.scale;
+      const worldY = (my - t.y) / t.scale;
 
-    if (hitId) {
-      setHoveredEdgeId(hitId);
-      const edge = visibleEdges.find((e) => e.id === hitId);
-      if (edge) {
-        if (viewMode === "functions") {
-          const src = nodes.find((n) => {
-            const b = nodeBottom(n);
-            return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
-          });
-          const tgt = nodes.find((n) => {
-            const t = nodeTop(n);
-            return Math.abs(t.x - edge.tx) < 1 && Math.abs(t.y - edge.ty) < 1;
-          });
-          if (src && tgt) {
-            setTooltip({
-              x: mx, y: my,
-              label: `${src.label} → ${tgt.label}`,
-              sub: [src.file?.split("/").pop(), tgt.file?.split("/").pop()]
-                .filter(Boolean).join(" → "),
+      const hitId = hitTestEdge(visibleEdgesRef.current, worldX, worldY, EDGE_HIT_THRESHOLD, t.scale);
+
+      if (hitId) {
+        setHoveredEdgeId(hitId);
+        const edge = visibleEdgesRef.current.find((e) => e.id === hitId);
+        if (edge) {
+          if (viewMode === "functions") {
+            const srcNode = nodes.find((n) => {
+              const b = nodeBottom(n);
+              return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
             });
-          }
-        } else {
-          const srcFile = fileNodes.find((n) => {
-            const b = nodeBottom(n);
-            return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
-          });
-          const tgtFile = fileNodes.find((n) => {
-            const t = nodeTop(n);
-            return Math.abs(t.x - edge.tx) < 1 && Math.abs(t.y - edge.ty) < 1;
-          });
-          const fileEdge = fileEdges.find((e) => e.id === hitId);
-          if (srcFile && tgtFile) {
-            setTooltip({
-              x: mx, y: my,
-              label: `${srcFile.label} → ${tgtFile.label}`,
-              sub: fileEdge ? `${fileEdge.callCount} call${fileEdge.callCount !== 1 ? "s" : ""}` : "",
+            const tgtNode = nodes.find((n) => {
+              const top = nodeTop(n);
+              return Math.abs(top.x - edge.tx) < 1 && Math.abs(top.y - edge.ty) < 1;
             });
+            if (srcNode && tgtNode) {
+              setTooltip({
+                x: mx, y: my,
+                label: `${srcNode.label} → ${tgtNode.label}`,
+                sub: [srcNode.file?.split("/").pop(), tgtNode.file?.split("/").pop()]
+                  .filter(Boolean).join(" → "),
+              });
+            }
+          } else {
+            const srcFile = fileNodes.find((n) => {
+              const b = nodeBottom(n);
+              return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
+            });
+            const tgtFile = fileNodes.find((n) => {
+              const top = nodeTop(n);
+              return Math.abs(top.x - edge.tx) < 1 && Math.abs(top.y - edge.ty) < 1;
+            });
+            const fileEdge = fileEdges.find((e) => e.id === hitId);
+            if (srcFile && tgtFile) {
+              setTooltip({
+                x: mx, y: my,
+                label: `${srcFile.label} → ${tgtFile.label}`,
+                sub: fileEdge ? `${fileEdge.callCount} call${fileEdge.callCount !== 1 ? "s" : ""}` : "",
+              });
+            }
           }
         }
-      }
-    } else {
-      if (hoveredEdgeId) {
+      } else if (hoveredEdgeIdRef.current) {
         setHoveredEdgeId(null);
         setTooltip(null);
       }
-    }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleEdges, viewMode, fileNodes, fileEdges, nodes, hoveredEdgeId]);
+  }, [viewMode, fileNodes, fileEdges, nodes]);
 
   const handleMouseLeave = useCallback(() => {
     setHoveredEdgeId(null);
@@ -579,14 +631,11 @@ export default function GraphCanvas({
             effectiveHoveredEdgeId={effectiveHoveredEdgeId}
             connectedIds={connectedIds}
             colorFor={colorFor}
-            showLabels={showLabels}
             onSelectNode={onSelectNode}
             onSelectFile={onSelectFile}
             onHoverNode={setHoveredNodeId}
             isDragging={!!drag.current?.moved}
-            tx={transform.x}
-            ty={transform.y}
-            scale={transform.scale}
+            worldContainerRef={worldContainerRef}
           />
 
           {tooltip && (

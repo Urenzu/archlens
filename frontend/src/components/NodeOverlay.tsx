@@ -1,3 +1,4 @@
+import { type RefObject } from "react";
 import type { GraphNode } from "../types/graph";
 import type { FileColor } from "../lib/fileColors";
 import styles from "./NodeOverlay.module.css";
@@ -24,24 +25,22 @@ interface Props {
   effectiveHoveredEdgeId: string | null;
   connectedIds: Set<string> | null;
   colorFor: (file: string | undefined) => FileColor;
-  showLabels: boolean;
   onSelectNode: (id: string) => void;
   onSelectFile: (file: string) => void;
   onHoverNode: (id: string | null) => void;
   isDragging: boolean;
   // file view
   fileNodes: FileNode[];
-  // shared transform
-  tx: number;
-  ty: number;
-  scale: number;
+  // The transform container ref — GraphCanvas updates style.transform directly
+  // (bypassing React to keep canvas + nodes in sync every rAF).
+  worldContainerRef: RefObject<HTMLDivElement | null>;
 }
 
 export default function NodeOverlay({
   viewMode, nodes, selectedNodeId, selectedFileId,
   hoveredNodeId, effectiveHoveredEdgeId, connectedIds, colorFor,
-  showLabels, onSelectNode, onSelectFile, onHoverNode, isDragging,
-  fileNodes, tx, ty, scale,
+  onSelectNode, onSelectFile, onHoverNode, isDragging,
+  fileNodes, worldContainerRef,
 }: Props) {
   return (
     <div
@@ -49,8 +48,8 @@ export default function NodeOverlay({
       style={{ pointerEvents: isDragging ? "none" : undefined }}
     >
       <div
+        ref={worldContainerRef}
         className={styles.worldContainer}
-        style={{ transform: `translate(${tx}px,${ty}px) scale(${scale})` }}
       >
         {viewMode === "functions" && nodes.map((node) => {
           const isSelected = node.id === selectedNodeId;
@@ -59,8 +58,8 @@ export default function NodeOverlay({
           const isComplex = !!node.isComplex;
           const isConnected = connectedIds?.has(node.id) ?? false;
           const isDimmedByFile = selectedFileId !== null && node.file !== selectedFileId;
-          const isDimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected;
           const isNodeHovered = node.id === hoveredNodeId && !isDragging;
+          const isDimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected && !isNodeHovered && !isSelected;
           const color = colorFor(node.file);
           const borderColor = isSelected ? color.selected
             : isNodeHovered ? color.text
@@ -90,12 +89,8 @@ export default function NodeOverlay({
             >
               {isVuln && <div className={styles.vulnRing} />}
               <div className={styles.highlight} />
-              {showLabels && (
-                <>
-                  <span className={styles.label}>{node.label}</span>
-                  {node.kind && <span className={styles.kind}>{node.kind}</span>}
-                </>
-              )}
+              <span className={styles.label}>{node.label}</span>
+              {node.kind && <span className={styles.kind}>{node.kind}</span>}
             </div>
           );
         })}
@@ -104,7 +99,7 @@ export default function NodeOverlay({
           const color = colorFor(node.id);
           const isConnected = connectedIds?.has(node.id) ?? false;
           const isActive = node.id === selectedFileId;
-          const dimmed = effectiveHoveredEdgeId !== null && !isConnected;
+          const dimmed = effectiveHoveredEdgeId !== null && !isConnected && !isActive;
           const borderColor = node.hasVuln ? "#e03535"
             : isActive ? color.selected
             : isConnected ? color.text
@@ -134,16 +129,12 @@ export default function NodeOverlay({
             >
               <div className={styles.highlight} />
               <div className={styles.accentBar} style={{ background: color.border }} />
-              {showLabels && (
-                <>
-                  <span className={styles.fileLabel} style={{ color: labelColor }}>
-                    {node.label}
-                  </span>
-                  <span className={styles.fileMeta} style={{ color: color.border }}>
-                    {tags}
-                  </span>
-                </>
-              )}
+              <span className={styles.fileLabel} style={{ color: labelColor }}>
+                {node.label}
+              </span>
+              <span className={styles.fileMeta} style={{ color: color.border }}>
+                {tags}
+              </span>
             </div>
           );
         })}
