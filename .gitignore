@@ -1,6 +1,7 @@
 # Project-specific
 idea.md
 bugs.md
+progression.md
 .claude/
 .history/
 
@@ -22,6 +23,8 @@ frontend/.env.local
 
 # Rust
 engine/target/
+server/target/
+frontend/pkg/
 
 # OS
 .DS_Store

@@ -1,0 +1,1008 @@
+{
+  "nodes": [
+    {
+      "id": "app.create_app",
+      "label": "create_app",
+      "kind": "function",
+      "x": 740,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 0,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 2
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "app.load_config",
+      "label": "load_config",
+      "kind": "function",
+      "x": 60,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 9,
+        "params": 0,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "app.setup_database",
+      "label": "setup_database",
+      "kind": "function",
+      "x": 210,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 3,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "app.App.__init__",
+      "label": "__init__",
+      "kind": "function",
+      "x": 230,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 4,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "app.App.route",
+      "label": "route",
+      "kind": "function",
+      "x": 570,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "app.App.dispatch",
+      "label": "dispatch",
+      "kind": "function",
+      "x": 400,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 4,
+        "loc": 15,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 0,
+        "callees": 3
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "app.App",
+      "label": "App",
+      "kind": "class",
+      "x": 60,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 0,
+        "loc": 29,
+        "params": 0,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "app.py"
+    },
+    {
+      "id": "auth.authenticate",
+      "label": "authenticate",
+      "kind": "function",
+      "x": 360,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 2,
+        "loc": 6,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 1,
+        "callees": 1
+      },
+      "file": "auth.py"
+    },
+    {
+      "id": "auth.validate_token",
+      "label": "validate_token",
+      "kind": "function",
+      "x": 60,
+      "y": 328,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 5,
+        "loc": 15,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 1,
+        "callees": 2
+      },
+      "file": "auth.py"
+    },
+    {
+      "id": "auth.decode_payload",
+      "label": "decode_payload",
+      "kind": "function",
+      "x": 60,
+      "y": 462,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 6,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "auth.py"
+    },
+    {
+      "id": "auth.verify_signature",
+      "label": "verify_signature",
+      "kind": "function",
+      "x": 210,
+      "y": 462,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "auth.py"
+    },
+    {
+      "id": "auth.authorize",
+      "label": "authorize",
+      "kind": "function",
+      "x": 510,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 10,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "auth.py"
+    },
+    {
+      "id": "auth.hash_password",
+      "label": "hash_password",
+      "kind": "function",
+      "x": 910,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 3,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "auth.py"
+    },
+    {
+      "id": "db.get_connection",
+      "label": "get_connection",
+      "kind": "function",
+      "x": 360,
+      "y": 328,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 2,
+        "loc": 6,
+        "params": 0,
+        "maxNesting": 1,
+        "callers": 3,
+        "callees": 0
+      },
+      "isHot": true,
+      "file": "db.py"
+    },
+    {
+      "id": "db.get_user",
+      "label": "get_user",
+      "kind": "function",
+      "x": 660,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 2
+      },
+      "file": "db.py"
+    },
+    {
+      "id": "db.create_user",
+      "label": "create_user",
+      "kind": "function",
+      "x": 1080,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 3,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 2
+      },
+      "file": "db.py"
+    },
+    {
+      "id": "db.execute_query",
+      "label": "execute_query",
+      "kind": "function",
+      "x": 210,
+      "y": 328,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 6,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 6,
+        "callees": 1
+      },
+      "isHot": true,
+      "file": "db.py"
+    },
+    {
+      "id": "db.delete_user",
+      "label": "delete_user",
+      "kind": "function",
+      "x": 1250,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 4,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 1
+      },
+      "file": "db.py"
+    },
+    {
+      "id": "db.update_user",
+      "label": "update_user",
+      "kind": "function",
+      "x": 1420,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 2,
+        "loc": 8,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 0,
+        "callees": 1
+      },
+      "file": "db.py"
+    },
+    {
+      "id": "handlers.handle_user_request",
+      "label": "handle_user_request",
+      "kind": "function",
+      "x": 1760,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 3,
+        "loc": 12,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 0,
+        "callees": 2
+      },
+      "file": "handlers.py"
+    },
+    {
+      "id": "handlers.handle_admin_request",
+      "label": "handle_admin_request",
+      "kind": "function",
+      "x": 1590,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 5,
+        "loc": 15,
+        "params": 1,
+        "maxNesting": 3,
+        "callers": 0,
+        "callees": 5
+      },
+      "file": "handlers.py"
+    },
+    {
+      "id": "handlers.list_all_users",
+      "label": "list_all_users",
+      "kind": "function",
+      "x": 810,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 4,
+        "loc": 16,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 1,
+        "callees": 2
+      },
+      "file": "handlers.py"
+    },
+    {
+      "id": "handlers.run_custom_query",
+      "label": "run_custom_query",
+      "kind": "function",
+      "x": 1110,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 2
+      },
+      "file": "handlers.py"
+    },
+    {
+      "id": "handlers.render_template",
+      "label": "render_template",
+      "kind": "function",
+      "x": 960,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 5,
+        "params": 1,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 1
+      },
+      "file": "handlers.py"
+    },
+    {
+      "id": "middleware.log_request",
+      "label": "log_request",
+      "kind": "function",
+      "x": 1260,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 2,
+        "loc": 11,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "middleware.py"
+    },
+    {
+      "id": "middleware.rate_limit",
+      "label": "rate_limit",
+      "kind": "function",
+      "x": 1410,
+      "y": 194,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 3,
+        "loc": 16,
+        "params": 3,
+        "maxNesting": 1,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "middleware.py"
+    },
+    {
+      "id": "middleware.cors_middleware",
+      "label": "cors_middleware",
+      "kind": "function",
+      "x": 1930,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 6,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "middleware.py"
+    },
+    {
+      "id": "utils.sanitize_input",
+      "label": "sanitize_input",
+      "kind": "function",
+      "x": 2440,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 2,
+        "loc": 5,
+        "params": 1,
+        "maxNesting": 1,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "utils.py"
+    },
+    {
+      "id": "utils.format_response",
+      "label": "format_response",
+      "kind": "function",
+      "x": 360,
+      "y": 462,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 3,
+        "loc": 7,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 5,
+        "callees": 0
+      },
+      "isHot": true,
+      "file": "utils.py"
+    },
+    {
+      "id": "utils.build_template",
+      "label": "build_template",
+      "kind": "function",
+      "x": 510,
+      "y": 328,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 6,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 1,
+        "callees": 2
+      },
+      "vulnerability": "Code injection \u2014 eval() with dynamic input",
+      "file": "utils.py"
+    },
+    {
+      "id": "utils.load_template",
+      "label": "load_template",
+      "kind": "function",
+      "x": 510,
+      "y": 462,
+      "width": 110,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 3,
+        "loc": 8,
+        "params": 1,
+        "maxNesting": 2,
+        "callers": 1,
+        "callees": 0
+      },
+      "file": "utils.py"
+    },
+    {
+      "id": "utils.log_event",
+      "label": "log_event",
+      "kind": "function",
+      "x": 2270,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 1,
+        "loc": 4,
+        "params": 2,
+        "maxNesting": 0,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "utils.py"
+    },
+    {
+      "id": "utils.deep_merge",
+      "label": "deep_merge",
+      "kind": "function",
+      "x": 2100,
+      "y": 60,
+      "width": 130,
+      "height": 34,
+      "metrics": {
+        "cyclomatic": 5,
+        "loc": 9,
+        "params": 2,
+        "maxNesting": 2,
+        "callers": 0,
+        "callees": 0
+      },
+      "file": "utils.py"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "app.create_app",
+      "target": "app.load_config",
+      "kind": "normal"
+    },
+    {
+      "id": "e2",
+      "source": "app.create_app",
+      "target": "app.setup_database",
+      "kind": "normal"
+    },
+    {
+      "id": "e3",
+      "source": "app.App.dispatch",
+      "target": "middleware.log_request",
+      "kind": "normal"
+    },
+    {
+      "id": "e4",
+      "source": "app.App.dispatch",
+      "target": "middleware.rate_limit",
+      "kind": "normal"
+    },
+    {
+      "id": "e5",
+      "source": "app.App.dispatch",
+      "target": "auth.authenticate",
+      "kind": "normal"
+    },
+    {
+      "id": "e6",
+      "source": "auth.authenticate",
+      "target": "auth.validate_token",
+      "kind": "normal"
+    },
+    {
+      "id": "e7",
+      "source": "auth.validate_token",
+      "target": "auth.decode_payload",
+      "kind": "normal"
+    },
+    {
+      "id": "e8",
+      "source": "auth.validate_token",
+      "target": "auth.verify_signature",
+      "kind": "normal"
+    },
+    {
+      "id": "e9",
+      "source": "db.get_user",
+      "target": "db.get_connection",
+      "kind": "critical"
+    },
+    {
+      "id": "e10",
+      "source": "db.get_user",
+      "target": "db.execute_query",
+      "kind": "critical"
+    },
+    {
+      "id": "e11",
+      "source": "db.create_user",
+      "target": "db.get_connection",
+      "kind": "critical"
+    },
+    {
+      "id": "e12",
+      "source": "db.create_user",
+      "target": "db.execute_query",
+      "kind": "critical"
+    },
+    {
+      "id": "e13",
+      "source": "db.execute_query",
+      "target": "db.get_connection",
+      "kind": "critical"
+    },
+    {
+      "id": "e14",
+      "source": "db.delete_user",
+      "target": "db.execute_query",
+      "kind": "critical"
+    },
+    {
+      "id": "e15",
+      "source": "db.update_user",
+      "target": "db.execute_query",
+      "kind": "critical"
+    },
+    {
+      "id": "e16",
+      "source": "handlers.handle_user_request",
+      "target": "db.get_user",
+      "kind": "normal"
+    },
+    {
+      "id": "e17",
+      "source": "handlers.handle_user_request",
+      "target": "utils.format_response",
+      "kind": "critical"
+    },
+    {
+      "id": "e18",
+      "source": "handlers.handle_admin_request",
+      "target": "auth.authorize",
+      "kind": "normal"
+    },
+    {
+      "id": "e19",
+      "source": "handlers.handle_admin_request",
+      "target": "utils.format_response",
+      "kind": "critical"
+    },
+    {
+      "id": "e20",
+      "source": "handlers.handle_admin_request",
+      "target": "handlers.list_all_users",
+      "kind": "normal"
+    },
+    {
+      "id": "e21",
+      "source": "handlers.handle_admin_request",
+      "target": "handlers.run_custom_query",
+      "kind": "normal"
+    },
+    {
+      "id": "e22",
+      "source": "handlers.handle_admin_request",
+      "target": "handlers.render_template",
+      "kind": "normal"
+    },
+    {
+      "id": "e23",
+      "source": "handlers.list_all_users",
+      "target": "db.execute_query",
+      "kind": "critical"
+    },
+    {
+      "id": "e24",
+      "source": "handlers.list_all_users",
+      "target": "utils.format_response",
+      "kind": "critical"
+    },
+    {
+      "id": "e25",
+      "source": "handlers.run_custom_query",
+      "target": "db.execute_query",
+      "kind": "critical"
+    },
+    {
+      "id": "e26",
+      "source": "handlers.run_custom_query",
+      "target": "utils.format_response",
+      "kind": "critical"
+    },
+    {
+      "id": "e27",
+      "source": "handlers.render_template",
+      "target": "utils.build_template",
+      "kind": "normal"
+    },
+    {
+      "id": "e28",
+      "source": "utils.build_template",
+      "target": "utils.load_template",
+      "kind": "normal"
+    },
+    {
+      "id": "e29",
+      "source": "utils.build_template",
+      "target": "utils.format_response",
+      "kind": "critical"
+    }
+  ],
+  "fileEdges": [
+    {
+      "source": "app.py",
+      "target": "auth.py",
+      "callCount": 1
+    },
+    {
+      "source": "app.py",
+      "target": "handlers.py",
+      "callCount": 0
+    },
+    {
+      "source": "app.py",
+      "target": "middleware.py",
+      "callCount": 2
+    },
+    {
+      "source": "handlers.py",
+      "target": "db.py",
+      "callCount": 3
+    },
+    {
+      "source": "handlers.py",
+      "target": "auth.py",
+      "callCount": 1
+    },
+    {
+      "source": "handlers.py",
+      "target": "utils.py",
+      "callCount": 5
+    }
+  ],
+  "modules": [
+    {
+      "name": "./",
+      "count": 33
+    }
+  ],
+  "callers": {
+    "app.load_config": [
+      {
+        "name": "app.create_app",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "app.setup_database": [
+      {
+        "name": "app.create_app",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "middleware.log_request": [
+      {
+        "name": "app.App.dispatch",
+        "kind": "class",
+        "depth": 1
+      }
+    ],
+    "middleware.rate_limit": [
+      {
+        "name": "app.App.dispatch",
+        "kind": "class",
+        "depth": 1
+      }
+    ],
+    "auth.authenticate": [
+      {
+        "name": "app.App.dispatch",
+        "kind": "class",
+        "depth": 1
+      }
+    ],
+    "auth.validate_token": [
+      {
+        "name": "auth.authenticate",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "auth.decode_payload": [
+      {
+        "name": "auth.validate_token",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "auth.verify_signature": [
+      {
+        "name": "auth.validate_token",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "db.get_connection": [
+      {
+        "name": "db.get_user",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "db.create_user",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "db.execute_query",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "db.execute_query": [
+      {
+        "name": "db.get_user",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "db.create_user",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "db.delete_user",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "db.update_user",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "handlers.list_all_users",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "handlers.run_custom_query",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "db.get_user": [
+      {
+        "name": "handlers.handle_user_request",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "utils.format_response": [
+      {
+        "name": "handlers.handle_user_request",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "handlers.handle_admin_request",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "handlers.list_all_users",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "handlers.run_custom_query",
+        "kind": "function",
+        "depth": 1
+      },
+      {
+        "name": "utils.build_template",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "auth.authorize": [
+      {
+        "name": "handlers.handle_admin_request",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "handlers.list_all_users": [
+      {
+        "name": "handlers.handle_admin_request",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "handlers.run_custom_query": [
+      {
+        "name": "handlers.handle_admin_request",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "handlers.render_template": [
+      {
+        "name": "handlers.handle_admin_request",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "utils.build_template": [
+      {
+        "name": "handlers.render_template",
+        "kind": "function",
+        "depth": 1
+      }
+    ],
+    "utils.load_template": [
+      {
+        "name": "utils.build_template",
+        "kind": "function",
+        "depth": 1
+      }
+    ]
+  },
+  "stats": {
+    "name": "git@github.com:Urenzu/archlens",
+    "branch": "canvas-01",
+    "commit": "a7f81bd",
+    "functions": 32,
+    "classes": 1,
+    "modules": 6,
+    "vulns": 1
+  }
+}

@@ -1,0 +1,13 @@
+[package]
+name = "archlens-server"
+version = "0.0.1"
+edition = "2021"
+description = "Thin file server for ArchLens"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+archlens-engine = { path = "../engine" }
