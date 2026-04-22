@@ -1,3 +1,52 @@
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes showAllIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.loadingSpinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border-hi);
+  border-top-color: var(--text-dim);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 4px;
+}
+
+.showAllBtn {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(9, 9, 9, 0.80);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 6px 16px;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  animation: showAllIn 0.18s ease;
+  z-index: 20;
+}
+
+.showAllBtn:hover {
+  background: rgba(18, 18, 18, 0.88);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
 .empty {
   position: absolute;
   inset: 0;
@@ -5,81 +54,75 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   pointer-events: none;
 }
 
 .emptyTitle {
-  font-size: 12px;
+  font-family: var(--font-ui);
+  font-size: 13px;
   color: var(--text-faint);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .emptyHint {
-  font-size: 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: var(--text-faint);
-  opacity: 0.5;
-  letter-spacing: 0.06em;
+  opacity: 0.45;
+  letter-spacing: 0.02em;
 }
 
 .canvas {
-  position: relative;
-  overflow: hidden;
-  background: #0c0c0c;
-  flex: 1;
-}
-
-.graph {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
   cursor: grab;
   user-select: none;
 }
 
-.graph:active {
+.canvas:active {
   cursor: grabbing;
 }
 
-.nodeGroup {
-  cursor: pointer;
-  transition: opacity 0.1s;
-}
-
-.nodeGroup:hover rect:last-of-type {
-  fill: #252525;
-}
-
-.fileNodeGroup {
-  cursor: pointer;
-}
-
-.fileNodeGroup:hover rect:last-of-type {
-  fill: #222222;
+.canvasLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* ── Tooltip ── */
 .tooltip {
   position: absolute;
   pointer-events: none;
-  background: #161616;
-  border: 1px solid #2e2e2e;
-  border-radius: 3px;
-  padding: 6px 10px;
-  font-family: 'IBM Plex Mono', monospace;
+  background: rgba(9, 9, 9, 0.88);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 5px;
+  padding: 7px 11px;
   white-space: nowrap;
-  z-index: 10;
+  z-index: 30;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .tooltipLabel {
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #d8d8d8;
+  color: var(--text);
   font-weight: 500;
 }
 
 .tooltipSub {
+  font-family: var(--font-ui);
   font-size: 9px;
-  color: #555;
-  margin-top: 2px;
+  color: var(--text-dim);
+  margin-top: 3px;
 }

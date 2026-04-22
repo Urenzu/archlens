@@ -1,5 +1,12 @@
-/// ArchLens high-performance analysis engine.
-/// Will handle hot-path graph traversal, complexity scoring, and metrics aggregation.
+pub mod analyze;
+pub mod classifier;
+pub mod graph;
+pub mod hotpath;
+pub mod layout;
+pub mod metrics;
+pub mod models;
+pub mod parser;
+pub mod vulnerability;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")

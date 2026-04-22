@@ -1,6 +1,7 @@
 # Project-specific
 idea.md
 bugs.md
+progression.md
 .claude/
 .history/
 
@@ -21,7 +22,13 @@ frontend/.env.local
 *.local
 
 # Rust
+target/
 engine/target/
+server/target/
+frontend/pkg/
+
+# TypeScript
+frontend/tsconfig.tsbuildinfo
 
 # OS
 .DS_Store

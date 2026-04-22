@@ -1,0 +1,35 @@
+.shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.workspace {
+  position: relative;
+  overflow: hidden;
+}
+
+.panelLeft {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 220px;
+  display: flex;
+  overflow: hidden;
+  z-index: 10;
+  transition: width 0.18s ease;
+}
+
+.panelRight {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 260px;
+  display: flex;
+  overflow: hidden;
+  z-index: 10;
+  transition: width 0.18s ease;
+}

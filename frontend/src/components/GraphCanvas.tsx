@@ -1,6 +1,8 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import type { GraphNode, GraphEdge, FileGraphEdge } from "../types/graph";
+import type { GraphNode, GraphEdge, FileGraphEdge, Layer } from "../types/graph";
 import { fileColor, assignFileColors } from "../lib/fileColors";
+import { drawFrame, hitTestEdge, type VisibleEdge } from "../lib/canvasRenderer";
+import NodeOverlay from "./NodeOverlay";
 import styles from "./GraphCanvas.module.css";
 
 interface Props {
@@ -12,6 +14,10 @@ interface Props {
   onSelectNode: (id: string) => void;
   onSelectFile: (file: string) => void;
   viewMode: "functions" | "files";
+  loading?: boolean;
+  hasSelection?: boolean;
+  onClearSelection?: () => void;
+  focusedLayer?: Layer | null;
 }
 
 interface Transform { x: number; y: number; scale: number; }
@@ -33,6 +39,7 @@ interface FileNode {
   fnCount: number;
   hasVuln: boolean;
   hasHot: boolean;
+  layer?: Layer;
 }
 
 interface FileEdge {
@@ -50,13 +57,10 @@ const LOD_HIDE_LABELS = 0.35;
 const LOD_THIN_EDGES  = 0.20;
 const FILE_NODE_W = 160;
 const FILE_NODE_H = 58;
-const FILE_H_GAP = 220;  // horizontal center-to-center
-const FILE_V_GAP = 170;  // vertical layer-to-layer
-
-function bezier(sx: number, sy: number, tx: number, ty: number): string {
-  const midY = (sy + ty) / 2;
-  return `M${sx},${sy} C${sx},${midY} ${tx},${midY} ${tx},${ty}`;
-}
+const FILE_H_GAP = 220;
+const FILE_V_GAP = 170;
+const NO_FILE_COLOR = { border: "#444444", text: "#686868", selected: "#909090" } as const;
+const EDGE_HIT_THRESHOLD = 12; // CSS pixels — zoom-independent
 
 function nodeBottom(n: { x: number; y: number; width: number; height: number }) {
   return { x: n.x + n.width / 2, y: n.y + n.height };
@@ -71,7 +75,6 @@ function buildFileGraph(
   edges: GraphEdge[],
   apiFileEdges?: FileGraphEdge[],
 ): { fileNodes: FileNode[]; fileEdges: FileEdge[] } {
-  // 1. Group function nodes by file
   const fileMap = new Map<string, GraphNode[]>();
   for (const n of nodes) {
     if (!n.file) continue;
@@ -83,9 +86,6 @@ function buildFileGraph(
 
   const fileIds = [...fileMap.keys()].sort();
 
-  // 2. Aggregate cross-file edges
-  // Prefer import-based edges from the API (captures dynamic dispatch, indirect calls);
-  // fall back to deriving edges from detected function calls only.
   let fileEdges: FileEdge[];
   if (apiFileEdges && apiFileEdges.length > 0) {
     fileEdges = apiFileEdges.map((e) => ({
@@ -112,7 +112,6 @@ function buildFileGraph(
     }
   }
 
-  // 3. Assign layers via DFS longest-path from roots
   const inAdj = new Map<string, string[]>(fileIds.map((id) => [id, []]));
   for (const e of fileEdges) {
     inAdj.get(e.target)?.push(e.source);
@@ -123,7 +122,7 @@ function buildFileGraph(
 
   function dfsLayer(id: string): number {
     if (layerMap.has(id)) return layerMap.get(id)!;
-    if (visiting.has(id)) return 0; // break cycle
+    if (visiting.has(id)) return 0;
     visiting.add(id);
     const preds = inAdj.get(id) ?? [];
     const l = preds.length === 0 ? 0 : Math.max(...preds.map(dfsLayer)) + 1;
@@ -133,7 +132,6 @@ function buildFileGraph(
   }
   for (const id of fileIds) dfsLayer(id);
 
-  // 4. Group by layer, sort alphabetically within layer
   const byLayer = new Map<number, string[]>();
   for (const [id, l] of layerMap.entries()) {
     const arr = byLayer.get(l) ?? [];
@@ -142,7 +140,6 @@ function buildFileGraph(
   }
   for (const arr of byLayer.values()) arr.sort();
 
-  // 5. Position: center each layer horizontally
   const posMap = new Map<string, { x: number; y: number }>();
   for (const [l, ids] of byLayer.entries()) {
     const totalW = (ids.length - 1) * FILE_H_GAP;
@@ -152,7 +149,6 @@ function buildFileGraph(
     });
   }
 
-  // 6. Build FileNode objects
   const fileNodes: FileNode[] = fileIds.map((file) => {
     const fns = fileMap.get(file)!;
     const pos = posMap.get(file) ?? { x: 0, y: 0 };
@@ -166,6 +162,7 @@ function buildFileGraph(
       fnCount: fns.length,
       hasVuln: fns.some((n) => !!n.vulnerability),
       hasHot: fns.some((n) => !!n.isHot),
+      layer: fns[0]?.layer,
     };
   });
 
@@ -174,11 +171,20 @@ function buildFileGraph(
 
 export default function GraphCanvas({
   nodes, edges, fileEdges: apiFileEdges, selectedNodeId, selectedFileId,
-  onSelectNode, onSelectFile, viewMode,
+  onSelectNode, onSelectFile, viewMode, loading, hasSelection, onClearSelection,
+  focusedLayer,
 }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const activeNodesRef = useRef<typeof activeNodes>([]);
-  const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const worldContainerRef = useRef<HTMLDivElement>(null);
+  const activeNodesRef = useRef<(GraphNode | FileNode)[]>([]);
+
+  // ── Transform is ref-only during pan/zoom — never goes through React ──────
+  // This is the key fix: both the canvas draw and the NodeOverlay CSS transform
+  // are updated inside the same requestAnimationFrame callback, so they are
+  // always in sync and never tear.
+  const transformRef = useRef<Transform>({ x: 0, y: 0, scale: 1 });
+
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
   const drag = useRef<{
@@ -188,6 +194,16 @@ export default function GraphCanvas({
   const velocity = useRef({ vx: 0, vy: 0 });
   const lastPos = useRef({ x: 0, y: 0, t: 0 });
   const inertiaFrame = useRef<number | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  // Pending rAF handle — always cancel-then-reschedule so StrictMode double-invocation
+  // doesn't leave a stuck "pending" flag (unlike a boolean guard).
+  const rafRef = useRef<number>(0);
+  // Ref mirror of hoveredEdgeId so the rAF can read it without capturing stale state.
+  const hoveredEdgeIdRef = useRef<string | null>(null);
+  hoveredEdgeIdRef.current = hoveredEdgeId;
+  // Gate for hit-test throttling — only one hit test per animation frame.
+  const hitRafRef = useRef<number>(0);
 
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -196,9 +212,15 @@ export default function GraphCanvas({
     [nodes],
   );
 
+  const colorCache = useMemo(() => {
+    const cache = new Map<string, ReturnType<typeof fileColor>>();
+    for (const [file, idx] of fileColorMap.entries()) cache.set(file, fileColor(idx));
+    return cache;
+  }, [fileColorMap]);
+
   function colorFor(file: string | undefined) {
-    if (!file) return { border: "#505050", text: "#a0a0a0", selected: "#c0c0c0" };
-    return fileColor(fileColorMap.get(file) ?? 0);
+    if (!file) return NO_FILE_COLOR;
+    return colorCache.get(file) ?? NO_FILE_COLOR;
   }
 
   const { fileNodes, fileEdges } = useMemo(
@@ -215,12 +237,7 @@ export default function GraphCanvas({
   const activeEdges = viewMode === "files" ? fileEdges : edges;
   activeNodesRef.current = activeNodes;
 
-  // Validate hoveredEdgeId against the *actually rendered* edge set.
-  // activeEdges contains ALL edges, but in functions view some are hidden by
-  // the file filter (return null, no hit area in DOM). Checking only activeEdges
-  // would still treat those hidden edges as valid, keeping the dim locked.
-  // So we also apply the same hiddenByFile logic used in the render.
-  const hoveredEdge = (() => {
+  const hoveredEdge = useMemo(() => {
     if (!hoveredEdgeId) return null;
     const e = activeEdges.find((e) => e.id === hoveredEdgeId);
     if (!e) return null;
@@ -230,18 +247,137 @@ export default function GraphCanvas({
       if (!(src?.file === selectedFileId && tgt?.file === selectedFileId)) return null;
     }
     return e;
-  })();
-  const effectiveHoveredEdgeId = hoveredEdge ? hoveredEdgeId : null;
-  const connectedIds = hoveredEdge
-    ? new Set([hoveredEdge.source, hoveredEdge.target])
-    : null;
+  }, [hoveredEdgeId, activeEdges, viewMode, selectedFileId, nodeMap]);
 
-  // Extract fit logic so it can be triggered from multiple sources
-  const fitView = useCallback((ns: typeof activeNodes) => {
-    if (!ns.length || !svgRef.current) return;
-    const el = svgRef.current.parentElement;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
+  const effectiveHoveredEdgeId = hoveredEdge ? hoveredEdgeId : null;
+  const connectedIds = useMemo(
+    () => hoveredEdge ? new Set([hoveredEdge.source, hoveredEdge.target]) : null,
+    [hoveredEdge],
+  );
+
+  // ── Build visible edges for the canvas renderer ────────────────────────────
+  // Hover state is intentionally NOT baked in here — it's applied dynamically in
+  // drawFrame via hoveredEdgeId. This means edge hover changes don't trigger an
+  // O(edges) array rebuild + React re-render cycle; they just schedule one rAF.
+  const visibleEdges: VisibleEdge[] = useMemo(() => {
+    if (viewMode === "functions") {
+      const result: VisibleEdge[] = [];
+      for (const edge of edges) {
+        const src = nodeMap.get(edge.source);
+        const tgt = nodeMap.get(edge.target);
+        if (!src || !tgt) continue;
+        const hiddenByFile = selectedFileId !== null
+          && !(src.file === selectedFileId && tgt.file === selectedFileId);
+        if (hiddenByFile) continue;
+        // When a layer is focused, only show edges where at least one endpoint is in that layer
+        if (focusedLayer && src.layer !== focusedLayer && tgt.layer !== focusedLayer) continue;
+        const isCrossFile = src.file && tgt.file && src.file !== tgt.file;
+        const stroke = colorFor(src.file).border;
+        const b = nodeBottom(src);
+        const t = nodeTop(tgt);
+        result.push({
+          id: edge.id,
+          sx: b.x, sy: b.y,
+          tx: t.x, ty: t.y,
+          color: stroke,
+          width: isCrossFile ? 1.8 : 1.2,
+          opacity: isCrossFile ? 0.8 : 0.5,
+        });
+      }
+      return result;
+    } else {
+      const result: VisibleEdge[] = [];
+      for (const edge of fileEdges) {
+        const src = fileNodeMap.get(edge.source);
+        const tgt = fileNodeMap.get(edge.target);
+        if (!src || !tgt) continue;
+        // When a layer is focused, only show edges where at least one endpoint is in that layer
+        if (focusedLayer && src.layer !== focusedLayer && tgt.layer !== focusedLayer) continue;
+        const stroke = colorFor(src.id).border;
+        const w = Math.min(1.5 + edge.callCount * 0.5, 6);
+        const b = nodeBottom(src);
+        const t = nodeTop(tgt);
+        result.push({
+          id: edge.id,
+          sx: b.x, sy: b.y,
+          tx: t.x, ty: t.y,
+          color: stroke,
+          width: w,
+          opacity: 0.7,
+        });
+      }
+      return result;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edges, fileEdges, nodeMap, fileNodeMap, viewMode, selectedFileId, focusedLayer]);
+
+  // Keep a ref so the rAF callback always reads the latest edges without re-creating
+  const visibleEdgesRef = useRef(visibleEdges);
+  visibleEdgesRef.current = visibleEdges;
+
+  // ── Unified rAF draw ───────────────────────────────────────────────────────
+  // Both canvas and NodeOverlay CSS transform are updated here, atomically,
+  // in the same frame — eliminating the 1-frame offset that caused tearing.
+  //
+  // Uses cancel-then-reschedule (not a boolean "pending" flag) so that React
+  // StrictMode's cleanup-between-double-invocations can't leave a stuck flag.
+  const requestDraw = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const t = transformRef.current;
+
+      // 1. Resize + draw canvas
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const bufW = Math.round(rect.width * dpr);
+        const bufH = Math.round(rect.height * dpr);
+        if (bufW > 0 && bufH > 0) {
+          if (canvas.width !== bufW || canvas.height !== bufH) {
+            canvas.width = bufW;
+            canvas.height = bufH;
+          }
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            drawFrame({
+              ctx,
+              width: canvas.width,
+              height: canvas.height,
+              dpr,
+              tx: t.x,
+              ty: t.y,
+              scale: t.scale,
+              edges: visibleEdgesRef.current,
+              hoveredEdgeId: hoveredEdgeIdRef.current,
+              opacityScale: t.scale < LOD_THIN_EDGES ? 0.5 : 1,
+            });
+          }
+        }
+      }
+
+      // 2. NodeOverlay transform — same frame, no tearing
+      const wc = worldContainerRef.current;
+      if (wc) {
+        wc.style.transform = `translate(${t.x}px,${t.y}px) scale(${t.scale})`;
+        // Expose scale so CSS can compensate border widths (prevents sub-pixel flicker)
+        wc.style.setProperty("--scale", String(t.scale));
+        // LOD: toggle a plain (non-module) class so we can reference it from CSS
+        wc.classList.toggle("labelsHidden", t.scale < LOD_HIDE_LABELS);
+      }
+    });
+  }, []);
+
+  // Redraw when edges change (data/selection) or hover state changes.
+  // hoveredEdgeId triggers a draw but NOT a visibleEdges recompute (by design).
+  useEffect(() => {
+    requestDraw();
+  }, [visibleEdges, hoveredEdgeId, requestDraw]);
+
+  // ── Fit view ───────────────────────────────────────────────────────────────
+  const fitView = useCallback((ns: (GraphNode | FileNode)[]) => {
+    if (!ns.length || !containerRef.current) return;
+    const { width, height } = containerRef.current.getBoundingClientRect();
     if (!width || !height) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of ns) {
@@ -252,13 +388,14 @@ export default function GraphCanvas({
     }
     const graphW = maxX - minX + PAD * 2;
     const graphH = maxY - minY + PAD * 2;
-    const scale = Math.min(width / graphW, height / graphH, 1);
-    setTransform({
-      x: (width  - graphW * scale) / 2 - minX * scale + PAD * scale,
-      y: (height - graphH * scale) / 2 - minY * scale + PAD * scale,
-      scale,
-    });
-  }, []);
+    const s = Math.min(width / graphW, height / graphH, 1);
+    transformRef.current = {
+      x: (width  - graphW * s) / 2 - minX * s + PAD * s,
+      y: (height - graphH * s) / 2 - minY * s + PAD * s,
+      scale: s,
+    };
+    requestDraw();
+  }, [requestDraw]);
 
   // Re-fit when nodes or viewMode change
   useEffect(() => {
@@ -268,14 +405,16 @@ export default function GraphCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, nodes]);
 
-  // Cancel inertia on unmount
+  // Cancel pending rAFs on unmount
   useEffect(() => () => {
     if (inertiaFrame.current !== null) cancelAnimationFrame(inertiaFrame.current);
+    cancelAnimationFrame(rafRef.current);
+    cancelAnimationFrame(hitRafRef.current);
   }, []);
 
-  // Re-fit when the canvas container is resized (either sidebar toggled or dragged)
+  // Re-fit when the container is resized (sidebar toggle / drag)
   useEffect(() => {
-    const el = svgRef.current?.parentElement;
+    const el = containerRef.current;
     if (!el) return;
     let lastW = 0, lastH = 0;
     const ro = new ResizeObserver((entries) => {
@@ -289,6 +428,7 @@ export default function GraphCanvas({
     return () => ro.disconnect();
   }, [fitView]);
 
+  // ── Wheel zoom ─────────────────────────────────────────────────────────────
   const onWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     if (inertiaFrame.current !== null) {
@@ -297,33 +437,28 @@ export default function GraphCanvas({
     }
     setHoveredEdgeId(null);
     setTooltip(null);
-    const rect = svgRef.current!.getBoundingClientRect();
+    const rect = containerRef.current!.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    setTransform((prev) => {
-      const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
-      return {
-        x: mx - ((mx - prev.x) / prev.scale) * s,
-        y: my - ((my - prev.y) / prev.scale) * s,
-        scale: s,
-      };
-    });
-  }, []);
+    const prev = transformRef.current;
+    const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
+    transformRef.current = {
+      x: mx - ((mx - prev.x) / prev.scale) * s,
+      y: my - ((my - prev.y) / prev.scale) * s,
+      scale: s,
+    };
+    requestDraw();
+  }, [requestDraw]);
 
   useEffect(() => {
-    const el = svgRef.current;
+    const el = containerRef.current;
     if (!el) return;
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [onWheel, nodes]); // re-run when nodes load so the SVG ref is populated
+  }, [onWheel]);
 
-  // Store transform in a ref so drag closures always see the latest value
-  // without needing transform in the useCallback deps (which caused re-creation
-  // every frame during drag, leading to stale closures and the "black screen").
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
-
+  // ── Pan / drag ─────────────────────────────────────────────────────────────
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if (inertiaFrame.current !== null) {
@@ -356,7 +491,10 @@ export default function GraphCanvas({
           };
         }
         lastPos.current = { x: ev.clientX, y: ev.clientY, t: now };
-        setTransform((prev) => ({ ...prev, x: startTx + dx, y: startTy + dy }));
+        // Update ref directly — no React state, no re-render
+        const prev = transformRef.current;
+        transformRef.current = { ...prev, x: startTx + dx, y: startTy + dy };
+        requestDraw();
       }
     }
 
@@ -374,7 +512,9 @@ export default function GraphCanvas({
           return;
         }
         const { vx, vy } = velocity.current;
-        setTransform((prev) => ({ ...prev, x: prev.x + vx, y: prev.y + vy }));
+        const prev = transformRef.current;
+        transformRef.current = { ...prev, x: prev.x + vx, y: prev.y + vy };
+        requestDraw();
         inertiaFrame.current = requestAnimationFrame(animate);
       }
       if (Math.hypot(velocity.current.vx, velocity.current.vy) > MIN_VEL) {
@@ -384,279 +524,143 @@ export default function GraphCanvas({
 
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
-  }, []); // stable — no deps needed, reads transform from ref
+  }, [requestDraw]);
 
+  // ── Edge hit testing on mouse move ─────────────────────────────────────────
+  // Throttled to one test per animation frame via cancel+reschedule.
+  // hitTestEdge is O(edges×samples) — running it 300+/sec on raw mousemove events
+  // is a major performance drain; capping at ~60/sec costs nothing perceptible.
+  const onCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (drag.current?.moved) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
 
-  const scale = transform.scale;
-  const showLabels = scale >= LOD_HIDE_LABELS;
-  const fnEdgeOpacity = scale < LOD_THIN_EDGES ? 0.25 : 0.5;
+    cancelAnimationFrame(hitRafRef.current);
+    hitRafRef.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
+      const t = transformRef.current;
+      const worldX = (mx - t.x) / t.scale;
+      const worldY = (my - t.y) / t.scale;
 
-  if (!nodes.length) {
-    return (
-      <div className={styles.canvas}>
-        <div className={styles.empty}>
-          <div className={styles.emptyTitle}>no repo loaded</div>
-          <div className={styles.emptyHint}>enter a path above and click analyze</div>
-        </div>
-      </div>
-    );
-  }
+      const hitId = hitTestEdge(visibleEdgesRef.current, worldX, worldY, EDGE_HIT_THRESHOLD, t.scale);
+
+      if (hitId) {
+        setHoveredEdgeId(hitId);
+        const edge = visibleEdgesRef.current.find((e) => e.id === hitId);
+        if (edge) {
+          if (viewMode === "functions") {
+            const srcNode = nodes.find((n) => {
+              const b = nodeBottom(n);
+              return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
+            });
+            const tgtNode = nodes.find((n) => {
+              const top = nodeTop(n);
+              return Math.abs(top.x - edge.tx) < 1 && Math.abs(top.y - edge.ty) < 1;
+            });
+            if (srcNode && tgtNode) {
+              setTooltip({
+                x: mx, y: my,
+                label: `${srcNode.label} → ${tgtNode.label}`,
+                sub: [srcNode.file?.split("/").pop(), tgtNode.file?.split("/").pop()]
+                  .filter(Boolean).join(" → "),
+              });
+            }
+          } else {
+            const srcFile = fileNodes.find((n) => {
+              const b = nodeBottom(n);
+              return Math.abs(b.x - edge.sx) < 1 && Math.abs(b.y - edge.sy) < 1;
+            });
+            const tgtFile = fileNodes.find((n) => {
+              const top = nodeTop(n);
+              return Math.abs(top.x - edge.tx) < 1 && Math.abs(top.y - edge.ty) < 1;
+            });
+            const fileEdge = fileEdges.find((e) => e.id === hitId);
+            if (srcFile && tgtFile) {
+              setTooltip({
+                x: mx, y: my,
+                label: `${srcFile.label} → ${tgtFile.label}`,
+                sub: fileEdge ? `${fileEdge.callCount} call${fileEdge.callCount !== 1 ? "s" : ""}` : "",
+              });
+            }
+          }
+        }
+      } else if (hoveredEdgeIdRef.current) {
+        setHoveredEdgeId(null);
+        setTooltip(null);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, fileNodes, fileEdges, nodes]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredEdgeId(null);
+    setTooltip(null);
+  }, []);
+
+  const isEmpty = !nodes.length;
 
   return (
-    <div className={styles.canvas}>
-      <svg
-        ref={svgRef}
-        className={styles.graph}
-        xmlns="http://www.w3.org/2000/svg"
-        onMouseDown={onMouseDown}
-        onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
-      >
-        <defs>
-          {/* Fn-view marker: small, tight */}
-          <marker id="arrow-fn" markerWidth="7" markerHeight="7" refX="6" refY="3.5"
-            orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0.5 L0,6.5 L6,3.5 z" fill="context-stroke" />
-          </marker>
-          {/* File-view marker: larger, clearly visible */}
-          <marker id="arrow-file" markerWidth="8" markerHeight="8" refX="7" refY="4"
-            orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0.5 L0,7.5 L7,4 z" fill="context-stroke" />
-          </marker>
-        </defs>
+    <div
+      ref={containerRef}
+      className={styles.canvas}
+      onMouseDown={isEmpty ? undefined : onMouseDown}
+      onMouseMove={isEmpty ? undefined : onCanvasMouseMove}
+      onMouseLeave={isEmpty ? undefined : handleMouseLeave}
+    >
+      {/* Canvas layer — always mounted so refs are stable */}
+      <canvas ref={canvasRef} className={styles.canvasLayer} />
 
-        <g transform={`translate(${transform.x},${transform.y}) scale(${scale})`}>
-
-          {/* ════ FUNCTIONS VIEW ════ */}
-          {viewMode === "functions" && (
+      {isEmpty ? (
+        <div className={styles.empty}>
+          {loading ? (
             <>
-              {edges.map((edge) => {
-                const src = nodeMap.get(edge.source);
-                const tgt = nodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                // Hide unless both endpoints belong to the selected file
-                const hiddenByFile = selectedFileId !== null
-                  && !(src.file === selectedFileId && tgt.file === selectedFileId);
-                if (hiddenByFile) return null;
-                const isHovered = edge.id === effectiveHoveredEdgeId;
-                const isCrossFile = src.file && tgt.file && src.file !== tgt.file;
-                const stroke = colorFor(src.file).border;
-                const baseOp = isCrossFile ? fnEdgeOpacity + 0.3 : fnEdgeOpacity;
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={edge.id}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke={stroke}
-                    strokeWidth={(isCrossFile ? 1.5 : 1) * (isHovered ? 2.5 : 1)}
-                    fill="none"
-                    opacity={isHovered ? 1 : effectiveHoveredEdgeId ? baseOp * 0.4 : baseOp}
-                    markerEnd="url(#arrow-fn)"
-                    style={{ transition: "opacity 0.1s, stroke-width 0.1s" }}
-                  />
-                );
-              })}
-
-              {edges.map((edge) => {
-                const src = nodeMap.get(edge.source);
-                const tgt = nodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                // Don't register hit areas for edges hidden by file selection
-                const hiddenByFile = selectedFileId !== null
-                  && !(src.file === selectedFileId && tgt.file === selectedFileId);
-                if (hiddenByFile) return null;
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={`hit-${edge.id}`}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke="transparent" strokeWidth={12} fill="none"
-                    style={{ cursor: "crosshair" }}
-                    onMouseEnter={(e) => {
-                      if (drag.current?.moved) return;
-                      setHoveredEdgeId(edge.id);
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top,
-                        label: `${src.label} → ${tgt.label}`,
-                        sub: [src.file?.split("/").pop(), tgt.file?.split("/").pop()]
-                          .filter(Boolean).join(" → "),
-                      });
-                    }}
-                    onMouseMove={(e) => {
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip((p) => p ? { ...p, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
-                    }}
-                    onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
-                  />
-                );
-              })}
-
-              {nodes.map((node) => {
-                const isSelected = node.id === selectedNodeId;
-                const isVuln = !!node.vulnerability;
-                const isHot = !!node.isHot;
-                const isComplex = !!node.isComplex;
-                const color = colorFor(node.file);
-                const isConnected = connectedIds?.has(node.id) ?? false;
-                const isDimmedByFile = selectedFileId !== null && node.file !== selectedFileId;
-                const isDimmedByEdge = effectiveHoveredEdgeId !== null && !isConnected;
-                const fill = isSelected || isConnected ? "#222" : (isHot || isComplex) ? "#1e1e1e" : "#181818";
-                const stroke = isSelected ? color.selected : isConnected ? color.text : color.border;
-                const labelColor = isSelected ? color.selected
-                  : isConnected ? color.text
-                  : isVuln ? "#e05555"
-                  : (isHot && isComplex) ? "#e0a060"
-                  : isHot ? "#c07840"
-                  : isComplex ? "#9a9daa"
-                  : "#a8a8a8";
-                const cx = node.x + node.width / 2;
-                const cy = node.y + node.height / 2;
-                return (
-                  <g key={node.id} className={styles.nodeGroup}
-                    opacity={isDimmedByFile ? 0.15 : isDimmedByEdge ? 0.2 : 1}
-                    onClick={(e) => { if (drag.current?.moved) return; e.stopPropagation(); onSelectNode(node.id); }}>
-                    <rect x={node.x} y={node.y} width={node.width} height={node.height}
-                      rx={2} fill={fill} stroke={stroke}
-                      strokeWidth={isSelected ? 2 : isConnected ? 1.5 : 1} />
-                    {showLabels && (
-                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
-                        fill={labelColor} fontFamily="'IBM Plex Mono', monospace"
-                        fontSize={11} fontWeight={isSelected || isConnected || isHot ? 500 : 400}>
-                        {node.label}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
+              <div className={styles.loadingSpinner} />
+              <div className={styles.emptyTitle}>analyzing…</div>
+            </>
+          ) : (
+            <>
+              <div className={styles.emptyTitle}>no repo loaded</div>
+              <div className={styles.emptyHint}>enter a path above and click analyze</div>
             </>
           )}
-
-          {/* ════ FILES VIEW ════ */}
-          {viewMode === "files" && (
-            <>
-              {/* Edges (visible) */}
-              {fileEdges.map((edge) => {
-                const src = fileNodeMap.get(edge.source);
-                const tgt = fileNodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                const isHovered = edge.id === effectiveHoveredEdgeId;
-                const stroke = colorFor(src.id).border;
-                const w = Math.min(1.5 + edge.callCount * 0.5, 6);
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={edge.id}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke={stroke}
-                    strokeWidth={w * (isHovered ? 1.8 : 1)}
-                    fill="none"
-                    opacity={isHovered ? 1 : effectiveHoveredEdgeId ? 0.15 : 0.7}
-                    markerEnd="url(#arrow-file)"
-                    style={{ transition: "opacity 0.12s, stroke-width 0.1s" }}
-                  />
-                );
-              })}
-
-              {/* Edge hit areas */}
-              {fileEdges.map((edge) => {
-                const src = fileNodeMap.get(edge.source);
-                const tgt = fileNodeMap.get(edge.target);
-                if (!src || !tgt) return null;
-                const b = nodeBottom(src);
-                const t = nodeTop(tgt);
-                return (
-                  <path key={`hit-${edge.id}`}
-                    d={bezier(b.x, b.y, t.x, t.y)}
-                    stroke="transparent" strokeWidth={18} fill="none"
-                    style={{ cursor: "crosshair" }}
-                    onMouseEnter={(e) => {
-                      if (drag.current?.moved) return;
-                      setHoveredEdgeId(edge.id);
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top,
-                        label: `${src.label} → ${tgt.label}`,
-                        sub: `${edge.callCount} call${edge.callCount !== 1 ? "s" : ""}`,
-                      });
-                    }}
-                    onMouseMove={(e) => {
-                      const rect = svgRef.current!.getBoundingClientRect();
-                      setTooltip((p) => p ? { ...p, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
-                    }}
-                    onMouseLeave={() => { setHoveredEdgeId(null); setTooltip(null); }}
-                  />
-                );
-              })}
-
-              {/* File nodes */}
-              {fileNodes.map((node) => {
-                const color = colorFor(node.id);
-                const isConnected = connectedIds?.has(node.id) ?? false;
-                const isActive = node.id === selectedFileId;
-                const dimmed = effectiveHoveredEdgeId !== null && !isConnected;
-                const stroke = node.hasVuln ? "#cc3333"
-                  : isActive ? color.selected
-                  : isConnected ? color.text
-                  : color.border;
-                const fill = isActive || isConnected ? "#1e1e1e" : "#141414";
-                const cx = node.x + node.width / 2;
-                const nameY = node.y + node.height / 2 - 9;
-                const metaY = node.y + node.height / 2 + 10;
-                const tags = [
-                  node.fnCount + " fn",
-                  node.hasHot ? "hot" : null,
-                  node.hasVuln ? "vuln" : null,
-                ].filter(Boolean).join("  ·  ");
-
-                return (
-                  <g key={node.id} className={styles.fileNodeGroup}
-                    opacity={dimmed ? 0.2 : 1}
-                    style={{ transition: "opacity 0.12s" }}
-                    onClick={() => { if (!drag.current?.moved) onSelectFile(node.id); }}>
-                    {/* Subtle colored left accent bar */}
-                    <rect x={node.x} y={node.y}
-                      width={3} height={node.height} rx={1}
-                      fill={color.border} opacity={0.9} />
-                    {/* Main box */}
-                    <rect x={node.x} y={node.y}
-                      width={node.width} height={node.height}
-                      rx={3} fill={fill} stroke={stroke}
-                      strokeWidth={isActive ? 1.5 : isConnected ? 1.5 : 1} />
-                    {showLabels && (
-                      <>
-                        <text x={cx} y={nameY}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fill={isActive ? color.selected : color.text}
-                          fontFamily="'IBM Plex Mono', monospace"
-                          fontSize={12} fontWeight={600}>
-                          {node.label}
-                        </text>
-                        <text x={cx} y={metaY}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fill={color.border}
-                          fontFamily="'IBM Plex Mono', monospace"
-                          fontSize={9}>
-                          {tags}
-                        </text>
-                      </>
-                    )}
-                  </g>
-                );
-              })}
-            </>
-          )}
-
-        </g>
-      </svg>
-
-      {tooltip && (
-        <div className={styles.tooltip}
-          style={{ left: tooltip.x + 14, top: tooltip.y - 14 }}>
-          <div className={styles.tooltipLabel}>{tooltip.label}</div>
-          {tooltip.sub && <div className={styles.tooltipSub}>{tooltip.sub}</div>}
         </div>
+      ) : (
+        <>
+          <NodeOverlay
+            viewMode={viewMode}
+            nodes={nodes}
+            fileNodes={fileNodes}
+            selectedNodeId={selectedNodeId}
+            selectedFileId={selectedFileId}
+            hoveredNodeId={hoveredNodeId}
+            effectiveHoveredEdgeId={effectiveHoveredEdgeId}
+            connectedIds={connectedIds}
+            colorFor={colorFor}
+            onSelectNode={onSelectNode}
+            onSelectFile={onSelectFile}
+            onHoverNode={setHoveredNodeId}
+            isDragging={!!drag.current?.moved}
+            worldContainerRef={worldContainerRef}
+            focusedLayer={focusedLayer ?? null}
+          />
+
+          {tooltip && (
+            <div className={styles.tooltip}
+              style={{ left: tooltip.x + 14, top: tooltip.y - 14 }}>
+              <div className={styles.tooltipLabel}>{tooltip.label}</div>
+              {tooltip.sub && <div className={styles.tooltipSub}>{tooltip.sub}</div>}
+            </div>
+          )}
+
+          {hasSelection && onClearSelection && (
+            <button className={styles.showAllBtn} onClick={onClearSelection}>
+              esc · show all
+            </button>
+          )}
+        </>
       )}
     </div>
   );

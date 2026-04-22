@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import type { AnalysisResult, RepoStats } from "./types/graph";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import type { AnalysisResult, Layer, RepoStats } from "./types/graph";
 import { analyzeRepo } from "./api";
 import Topbar from "./components/Topbar";
 import SidebarLeft from "./components/SidebarLeft";
 import SidebarRight from "./components/SidebarRight";
 import GraphCanvas from "./components/GraphCanvas";
 import ResizeHandle from "./components/ResizeHandle";
+import styles from "./App.module.css";
 
 const DEFAULT_REPO_PATH = import.meta.env.VITE_REPO_PATH || "";
 
@@ -29,6 +30,7 @@ export default function App() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"functions" | "files">("functions");
+  const [focusedLayer, setFocusedLayer] = useState<Layer | null>(null);
 
   const leftRef  = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -39,8 +41,27 @@ export default function App() {
   const callers   = data?.callers ?? {};
   const stats     = data?.stats ?? EMPTY_STATS;
 
-  const selectedNode    = nodes.find((n) => n.id === selectedNodeId) ?? null;
-  const selectedCallers = selectedNodeId ? (callers[selectedNodeId] ?? []) : [];
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [nodes, selectedNodeId],
+  );
+  const selectedCallers = useMemo(
+    () => selectedNodeId ? (callers[selectedNodeId] ?? []) : [],
+    [callers, selectedNodeId],
+  );
+
+  const clearSelection = useCallback(() => {
+    setSelectedNodeId(null);
+    setSelectedFileId(null);
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") clearSelection();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearSelection]);
 
   const handleSelectNode = useCallback((id: string) => {
     setSelectedNodeId((prev) => (prev === id ? null : id));
@@ -60,6 +81,7 @@ export default function App() {
       setData(result);
       setSelectedNodeId(null);
       setSelectedFileId(null);
+      setFocusedLayer(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
     } finally {
@@ -96,7 +118,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100vh", overflow: "hidden" }}>
+    <div className={styles.shell}>
       <Topbar
         stats={stats}
         repoPath={repoPath}
@@ -110,19 +132,8 @@ export default function App() {
         onToggleRight={toggleRight}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        hasSelection={!!(selectedFileId || selectedNodeId)}
-        onClearSelection={() => { setSelectedFileId(null); setSelectedNodeId(null); }}
       />
-      <div style={{ display: "flex", overflow: "hidden" }}>
-        <SidebarLeft
-          ref={leftRef}
-          nodes={nodes}
-          selectedNode={selectedNode}
-          selectedFileId={selectedFileId}
-          onSelectNode={handleSelectNode}
-          onSelectFile={handleSelectFile}
-        />
-        <ResizeHandle side="left" panelRef={leftRef} />
+      <div className={styles.workspace}>
         <GraphCanvas
           nodes={nodes}
           edges={edges}
@@ -132,16 +143,33 @@ export default function App() {
           onSelectNode={handleSelectNode}
           onSelectFile={handleSelectFile}
           viewMode={viewMode}
+          loading={loading}
+          hasSelection={!!(selectedFileId || selectedNodeId)}
+          onClearSelection={clearSelection}
+          focusedLayer={focusedLayer}
         />
-        <ResizeHandle side="right" panelRef={rightRef} />
-        <SidebarRight
-          ref={rightRef}
-          node={selectedNode}
-          callers={selectedCallers}
-          selectedFileId={selectedFileId}
-          allNodes={nodes}
-          fileEdges={fileEdges}
-        />
+        <div ref={leftRef} className={styles.panelLeft}>
+          <SidebarLeft
+            nodes={nodes}
+            selectedNode={selectedNode}
+            selectedFileId={selectedFileId}
+            onSelectNode={handleSelectNode}
+            onSelectFile={handleSelectFile}
+            focusedLayer={focusedLayer}
+            onFocusLayer={setFocusedLayer}
+          />
+          <ResizeHandle side="left" panelRef={leftRef} />
+        </div>
+        <div ref={rightRef} className={styles.panelRight}>
+          <ResizeHandle side="right" panelRef={rightRef} />
+          <SidebarRight
+            node={selectedNode}
+            callers={selectedCallers}
+            selectedFileId={selectedFileId}
+            allNodes={nodes}
+            fileEdges={fileEdges}
+          />
+        </div>
       </div>
     </div>
   );
